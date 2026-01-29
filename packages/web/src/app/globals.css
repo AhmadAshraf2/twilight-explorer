@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #11131f;
+  --background-secondary: #1a1d2e;
+  --background-tertiary: #24283b;
+  --primary: #7c3aed;
+  --primary-light: #a78bfa;
+  --text: #ffffff;
+  --text-secondary: #94a3b8;
+  --border: #334155;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  min-height: 100vh;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Table styles */
+.table-container {
+  @apply overflow-x-auto rounded-lg border border-border;
+}
+
+table {
+  @apply w-full text-sm;
+}
+
+th {
+  @apply bg-background-tertiary px-4 py-3 text-left font-medium text-text-secondary;
+}
+
+td {
+  @apply px-4 py-3 border-t border-border;
+}
+
+tr:hover td {
+  @apply bg-background-secondary;
+}
+
+/* Card styles */
+.card {
+  @apply bg-background-secondary rounded-lg border border-border p-4;
+}
+
+.card-header {
+  @apply text-lg font-semibold mb-4 text-text;
+}
+
+/* Badge styles */
+.badge {
+  @apply inline-flex items-center px-2 py-1 rounded-md text-xs font-medium;
+}
+
+.badge-success {
+  @apply bg-accent-green/20 text-accent-green;
+}
+
+.badge-error {
+  @apply bg-accent-red/20 text-accent-red;
+}
+
+.badge-warning {
+  @apply bg-accent-yellow/20 text-accent-yellow;
+}
+
+.badge-info {
+  @apply bg-accent-blue/20 text-accent-blue;
+}
+
+.badge-primary {
+  @apply bg-primary/20 text-primary-light;
+}
+
+/* Link styles */
+a {
+  @apply text-primary-light hover:text-primary transition-colors;
+}
+
+/* Code/hash styles */
+.hash {
+  @apply font-mono text-sm text-text-secondary hover:text-primary-light transition-colors cursor-pointer;
+}
+
+.hash-truncate {
+  @apply max-w-[200px] truncate;
+}
+
+/* Pulse animation for live indicator */
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Message type colors */
+.msg-bridge {
+  @apply text-accent-blue;
+}
+
+.msg-forks {
+  @apply text-accent-orange;
+}
+
+.msg-volt {
+  @apply text-accent-yellow;
+}
+
+.msg-zkos {
+  @apply text-primary-light;
+}

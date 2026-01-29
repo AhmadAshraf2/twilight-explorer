@@ -1,0 +1,235 @@
+import { Router, Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
+import axios from 'axios';
+import { config } from '../config.js';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// Fetch fresh decoded data from decode API
+async function fetchDecodedZkosData(txByteCode: string): Promise<any | null> {
+  try {
+    const response = await axios.post(
+      `${config.zkosDecodeUrl}/api/decode-transaction`,
+      { tx_byte_code: txByteCode },
+      {
+        timeout: 10000,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+    return response.data || null;
+  } catch (error) {
+    console.error('Failed to decode zkOS transaction:', error);
+    return null;
+  }
+}
+
+// Validation schemas
+const paginationSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+const txFilterSchema = z.object({
+  type: z.string().optional(),
+  status: z.enum(['success', 'failed']).optional(),
+  module: z.enum(['bridge', 'forks', 'volt', 'zkos']).optional(),
+});
+
+// GET /api/txs - List transactions with pagination and filters
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { page, limit } = paginationSchema.parse(req.query);
+    const filters = txFilterSchema.parse(req.query);
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (filters.type) {
+      where.type = { contains: filters.type };
+    }
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    if (filters.module) {
+      where.type = { contains: `.${filters.module}.` };
+    }
+
+    const [transactions, total] = await Promise.all([
+      prisma.transaction.findMany({
+        where,
+        orderBy: { blockHeight: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          hash: true,
+          blockHeight: true,
+          blockTime: true,
+          type: true,
+          messageTypes: true,
+          status: true,
+          gasUsed: true,
+          memo: true,
+        },
+      }),
+      prisma.transaction.count({ where }),
+    ]);
+
+    const serializedTxs = transactions.map((tx) => ({
+      ...tx,
+      gasUsed: tx.gasUsed.toString(),
+    }));
+
+    res.json({
+      data: serializedTxs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid query parameters', details: error.errors });
+    }
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/txs/recent - Get recent transactions
+router.get('/recent', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+
+    const transactions = await prisma.transaction.findMany({
+      orderBy: { blockHeight: 'desc' },
+      take: limit,
+      select: {
+        hash: true,
+        blockHeight: true,
+        blockTime: true,
+        type: true,
+        status: true,
+        gasUsed: true,
+      },
+    });
+
+    const serializedTxs = transactions.map((tx) => ({
+      ...tx,
+      gasUsed: tx.gasUsed.toString(),
+    }));
+
+    res.json(serializedTxs);
+  } catch (error) {
+    console.error('Error fetching recent transactions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/txs/:hash - Get transaction by hash
+router.get('/:hash', async (req: Request, res: Response) => {
+  try {
+    const { hash } = req.params;
+
+    if (!hash || hash.length < 10) {
+      return res.status(400).json({ error: 'Invalid transaction hash' });
+    }
+
+    const transaction = await prisma.transaction.findUnique({
+      where: { hash },
+      include: {
+        block: {
+          select: {
+            height: true,
+            hash: true,
+            timestamp: true,
+          },
+        },
+        events: {
+          select: {
+            type: true,
+            attributes: true,
+          },
+        },
+      },
+    });
+
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // Check if this transaction has zkOS transfer data
+    let zkosDecodedData = null;
+    if (transaction.type.includes('MsgTransferTx')) {
+      const zkosTransfer = await prisma.zkosTransfer.findFirst({
+        where: { txHash: hash },
+        select: { decodedData: true, txByteCode: true },
+      });
+      if (zkosTransfer) {
+        // Check if stored data has summary, if not fetch fresh
+        const storedData = zkosTransfer.decodedData as any;
+        console.log('Stored data has summary:', !!storedData?.summary, 'has txByteCode:', !!zkosTransfer.txByteCode);
+
+        if (storedData && storedData.summary) {
+          zkosDecodedData = storedData;
+        } else if (zkosTransfer.txByteCode) {
+          // Fetch fresh decoded data from API
+          console.log('Fetching fresh decoded data from:', config.zkosDecodeUrl);
+          const freshData = await fetchDecodedZkosData(zkosTransfer.txByteCode);
+          console.log('Fresh data received:', !!freshData, 'has summary:', !!freshData?.summary);
+          if (freshData) {
+            zkosDecodedData = freshData;
+            // Update the stored data for future requests
+            prisma.zkosTransfer.updateMany({
+              where: { txHash: hash },
+              data: { decodedData: freshData as any },
+            }).catch((err) => { console.error('Failed to update stored data:', err); });
+          } else {
+            zkosDecodedData = storedData;
+          }
+        } else {
+          zkosDecodedData = storedData;
+        }
+      }
+    }
+
+    res.json({
+      ...transaction,
+      gasUsed: transaction.gasUsed.toString(),
+      gasWanted: transaction.gasWanted.toString(),
+      zkosDecodedData,
+    });
+  } catch (error) {
+    console.error('Error fetching transaction:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/txs/types/stats - Get transaction type statistics
+router.get('/types/stats', async (req: Request, res: Response) => {
+  try {
+    const stats = await prisma.transaction.groupBy({
+      by: ['type'],
+      _count: { type: true },
+      orderBy: { _count: { type: 'desc' } },
+      take: 20,
+    });
+
+    res.json(
+      stats.map((s) => ({
+        type: s.type,
+        count: s._count.type,
+      }))
+    );
+  } catch (error) {
+    console.error('Error fetching transaction stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;

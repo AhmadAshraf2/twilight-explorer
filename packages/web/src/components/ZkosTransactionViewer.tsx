@@ -87,6 +87,81 @@ function formatOrderSize(value: number | string | any): string {
   return `${num.toLocaleString()} sats`;
 }
 
+// Format price in USD
+function formatPrice(value: number | string | any): string {
+  const extracted = extractValue(value);
+  const num = typeof extracted === 'string' ? parseFloat(extracted) : extracted;
+  if (isNaN(num)) return '$0';
+  return `$${num.toLocaleString()}`;
+}
+
+// Format position size
+function formatPositionSize(value: number | string | any): string {
+  const extracted = extractValue(value);
+  const num = typeof extracted === 'string' ? parseFloat(extracted) : extracted;
+  if (isNaN(num)) return '0';
+  return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
+// Memo Order Details component for displaying order information from Memo data
+function MemoOrderDetails({ data }: { data: MemoOrderData }) {
+  const { position_size, leverage, entry_price, order_side } = data;
+
+  const isLong = order_side?.toLowerCase() === 'long';
+  const isShort = order_side?.toLowerCase() === 'short';
+
+  return (
+    <div className="mt-3 space-y-2">
+      {/* Order Side Badge */}
+      {order_side && (
+        <div className="flex items-center gap-2">
+          <span className="text-text-secondary text-sm">Side:</span>
+          <span
+            className={clsx(
+              'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold uppercase',
+              isLong && 'bg-accent-green/20 text-accent-green',
+              isShort && 'bg-accent-orange/20 text-accent-orange',
+              !isLong && !isShort && 'bg-primary/20 text-primary-light'
+            )}
+          >
+            {isLong && <TrendingUp className="w-3 h-3" />}
+            {isShort && <TrendingDown className="w-3 h-3" />}
+            {String(order_side)}
+          </span>
+        </div>
+      )}
+
+      {/* Position Size */}
+      {position_size !== undefined && (
+        <div className="flex items-center gap-2">
+          <span className="text-text-secondary text-sm">Position Size:</span>
+          <span className="text-white font-medium">{formatPositionSize(position_size)}</span>
+        </div>
+      )}
+
+      {/* Entry Price */}
+      {entry_price !== undefined && (
+        <div className="flex items-center gap-2">
+          <span className="text-text-secondary text-sm">Entry Price:</span>
+          <span className="text-white font-medium">{formatPrice(entry_price)}</span>
+        </div>
+      )}
+
+      {/* Leverage */}
+      {leverage !== undefined && (
+        <div className="flex items-center gap-2">
+          <span className="text-text-secondary text-sm">Leverage:</span>
+          <span className="text-accent-yellow font-medium">
+            {typeof leverage === 'string' && leverage.includes('encrypted')
+              ? '(encrypted)'
+              : `${leverage}x`}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Get order operation display config
 function getOrderOperationConfig(operation: string) {
   switch (operation) {
@@ -228,11 +303,22 @@ interface OrderSummaryOutput {
   position?: number;
 }
 
+// New Memo data fields from updated decode API
+interface MemoOrderData {
+  position_size?: number;
+  leverage?: string | number;
+  entry_price?: number;
+  order_side?: 'long' | 'short' | string;
+}
+
 interface ZkosSummary {
   input_type?: string;
   output_type?: string;
   order_operation?: string;
+  order_type?: string;
   order_operation_description?: string;
+  program_opcodes?: string[];
+  program_type?: string;
   outputs?: OrderSummaryOutput[];
 }
 
@@ -315,24 +401,48 @@ function OutputItem({ output, index }: { output: CoinOutput; index: number }) {
 
   if (memo) {
     const memoData = extractValue(memo.data);
+
+    // Check if memoData is an array with order information (from new API)
+    const hasOrderData = Array.isArray(memoData) && memoData.length > 0 &&
+      (memoData[0]?.position_size !== undefined ||
+       memoData[0]?.order_side !== undefined ||
+       memoData[0]?.entry_price !== undefined);
+
     return (
       <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
         <div className="flex items-center gap-2 mb-2">
           <ArrowUpRight className="w-4 h-4 text-accent-blue" />
           <span className="text-white text-sm font-medium">Output #{index + 1}</span>
           <span className="badge badge-info text-xs">Memo</span>
+          {hasOrderData && memoData[0]?.order_side && (
+            <span
+              className={clsx(
+                'badge text-xs',
+                memoData[0].order_side.toLowerCase() === 'long' && 'badge-success',
+                memoData[0].order_side.toLowerCase() === 'short' && 'badge-warning'
+              )}
+            >
+              {String(memoData[0].order_side).toUpperCase()}
+            </span>
+          )}
         </div>
         <div className="space-y-1 text-sm pl-6">
-          <div className="flex items-start gap-2">
-            <span className="text-text-secondary min-w-[60px]">Data:</span>
-            <span className="font-mono text-text-muted break-all">
-              {typeof memoData === 'string'
-                ? truncateHex(memoData, 20, 16)
-                : Array.isArray(memoData)
-                  ? `${memoData.length} items`
-                  : 'N/A'}
-            </span>
-          </div>
+          {hasOrderData ? (
+            // Display order details from new API format
+            <MemoOrderDetails data={memoData[0] as MemoOrderData} />
+          ) : (
+            // Fallback to old display format
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[60px]">Data:</span>
+              <span className="font-mono text-text-muted break-all">
+                {typeof memoData === 'string'
+                  ? truncateHex(memoData, 20, 16)
+                  : Array.isArray(memoData)
+                    ? `${memoData.length} items`
+                    : 'N/A'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -930,6 +1040,8 @@ function OrderSummary({ summary }: { summary: ZkosSummary }) {
   const config = getOrderOperationConfig(operation);
   const Icon = config.icon;
   const orderSize = summary.outputs?.[0]?.order_size;
+  const orderType = safeString(summary.order_type);
+  const programType = safeString(summary.program_type);
 
   return (
     <div className={clsx('rounded-lg p-4 mb-4 border border-border/50', config.bgColor)}>
@@ -938,8 +1050,14 @@ function OrderSummary({ summary }: { summary: ZkosSummary }) {
           <Icon className={clsx('w-5 h-5', config.color)} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className={clsx('font-semibold', config.color)}>{config.label}</span>
+            {orderType && (
+              <span className="badge badge-info text-xs">{orderType}</span>
+            )}
+            {programType && (
+              <span className="badge text-xs">{programType}</span>
+            )}
             <span className="text-text-muted text-xs">
               {safeString(summary.input_type)} → {safeString(summary.output_type)}
             </span>

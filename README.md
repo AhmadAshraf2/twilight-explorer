@@ -108,8 +108,8 @@ npm run web
 | `ZKOS_DECODE_URL` | See .env.example | zkOS decode API endpoint |
 | `API_PORT` | `3001` | API server port |
 | `WS_PORT` | `3002` | WebSocket server port |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:3001` | API URL for frontend |
-| `NEXT_PUBLIC_WS_URL` | `ws://localhost:3002` | WebSocket URL for frontend |
+| `NEXT_PUBLIC_API_URL` | `http://143.198.60.224:3001` | API URL for frontend |
+| `NEXT_PUBLIC_WS_URL` | `ws://143.198.60.224:3002` | WebSocket URL for frontend |
 | `INDEXER_START_HEIGHT` | `1` | Block height to start indexing from |
 | `INDEXER_POLL_INTERVAL` | `2000` | Polling interval in milliseconds |
 

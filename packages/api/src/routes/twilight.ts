@@ -1,9 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { config } from '../config.js';
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// LCD API base URL
+const LCD_URL = config.lcdUrl;
 
 // Validation schemas
 const paginationSchema = z.object({
@@ -182,7 +186,50 @@ router.get('/reserves/:id', async (req: Request, res: Response) => {
 // Fragments
 // ============================================
 
-// GET /api/twilight/fragments - List fragments
+// GET /api/twilight/fragments/live - Fetch fragments directly from LCD
+// NOTE: This route MUST be before /fragments/:id to avoid "live" being matched as an ID
+router.get('/fragments/live', async (req: Request, res: Response) => {
+  try {
+    const response = await fetch(`${LCD_URL}/twilight-project/nyks/volt/get_all_fragments`);
+    if (!response.ok) {
+      throw new Error(`LCD API error: ${response.status}`);
+    }
+    const data = await response.json();
+
+    // Transform the data to a more usable format
+    const fragments = (data.Fragments || []).map((f: any) => ({
+      id: f.FragmentId,
+      status: f.FragmentStatus,
+      judgeAddress: f.JudgeAddress,
+      judgeStatus: f.JudgeStatus,
+      threshold: parseInt(f.Threshold || '0', 10),
+      signerApplicationFee: f.SignerApplicationFee,
+      feePool: f.FeePool,
+      feeBips: parseInt(f.FragmentFeeBips || '0', 10),
+      arbitraryData: f.arbitraryData || null,
+      reserveIds: f.ReserveIds || [],
+      signers: (f.Signers || []).map((s: any) => ({
+        fragmentId: s.FragmentID,
+        signerAddress: s.SignerAddress,
+        status: s.SignerStatus,
+        btcPubKey: s.SignerBtcPublicKey,
+        applicationFee: s.SignerApplicationFee,
+        feeBips: parseInt(s.SignerFeeBips || '0', 10),
+      })),
+      signersCount: (f.Signers || []).length,
+    }));
+
+    res.json({
+      data: fragments,
+      total: fragments.length,
+    });
+  } catch (error) {
+    console.error('Error fetching fragments from LCD:', error);
+    res.status(500).json({ error: 'Failed to fetch fragments from LCD' });
+  }
+});
+
+// GET /api/twilight/fragments - List fragments from database
 router.get('/fragments', async (req: Request, res: Response) => {
   try {
     const { page, limit } = paginationSchema.parse(req.query);

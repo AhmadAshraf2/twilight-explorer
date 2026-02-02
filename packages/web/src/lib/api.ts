@@ -110,6 +110,50 @@ export interface BtcWithdrawal {
   createdAt: string;
 }
 
+export interface Fragment {
+  id: string;
+  txHash: string;
+  blockHeight: number;
+  judgeAddress: string;
+  status: boolean;
+  threshold: number;
+  signerApplicationFee: string;
+  feePool: string;
+  feeBips: number;
+  signersCount: number;
+  arbitraryData: string | null;
+  createdAt: string;
+}
+
+export interface FragmentSignerLive {
+  fragmentId: string;
+  signerAddress: string;
+  status: boolean;
+  btcPubKey: string;
+  applicationFee: string;
+  feeBips: number;
+}
+
+export interface FragmentLive {
+  id: string;
+  status: boolean;
+  judgeAddress: string;
+  judgeStatus: boolean;
+  threshold: number;
+  signerApplicationFee: string;
+  feePool: string;
+  feeBips: number;
+  arbitraryData: string | null;
+  reserveIds: string[];
+  signers: FragmentSignerLive[];
+  signersCount: number;
+}
+
+export interface FragmentsLiveResponse {
+  data: FragmentLive[];
+  total: number;
+}
+
 async function fetchApi<T>(endpoint: string): Promise<T> {
   const response = await fetch(`${API_URL}${endpoint}`);
   if (!response.ok) {
@@ -189,7 +233,10 @@ export const getWithdrawals = (page = 1, limit = 20) =>
 export const getReserves = () => fetchApi<any[]>('/api/twilight/reserves');
 
 export const getFragments = (page = 1, limit = 20) =>
-  fetchApi<PaginatedResponse<any>>(`/api/twilight/fragments?page=${page}&limit=${limit}`);
+  fetchApi<PaginatedResponse<Fragment>>(`/api/twilight/fragments?page=${page}&limit=${limit}`);
+
+export const getFragmentsLive = () =>
+  fetchApi<FragmentsLiveResponse>('/api/twilight/fragments/live');
 
 export const getZkosTransfers = (page = 1, limit = 20) =>
   fetchApi<PaginatedResponse<any>>(`/api/twilight/zkos/transfers?page=${page}&limit=${limit}`);

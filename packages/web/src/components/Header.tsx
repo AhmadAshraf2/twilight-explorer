@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Menu, X, Search, Blocks, ArrowRightLeft, Wallet, BarChart3 } from 'lucide-react';
+import { Menu, X, Search, Blocks, ArrowRightLeft, Wallet, BarChart3, Puzzle } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import clsx from 'clsx';
 
@@ -13,6 +13,7 @@ const navigation = [
   { name: 'Transactions', href: '/txs', icon: ArrowRightLeft },
   { name: 'Deposits', href: '/deposits', icon: Wallet },
   { name: 'Withdrawals', href: '/withdrawals', icon: Wallet },
+  { name: 'Fragments', href: '/fragments', icon: Puzzle },
 ];
 
 export function Header() {

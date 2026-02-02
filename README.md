@@ -36,14 +36,22 @@ docker-compose up -d
 ```
 
 This starts:
-- PostgreSQL on port 5432
+- PostgreSQL on port 5433
 - Redis on port 6379
 
 ### 4. Set up the database schema
 
+Generate Prisma client and push schema to database:
+
 ```bash
 npm run db:generate
 npm run db:push
+```
+
+To reset/clear the database (drops all data and recreates tables):
+
+```bash
+npx prisma db push --force-reset
 ```
 
 ### 5. Run the services
@@ -74,7 +82,7 @@ npm run web
 | Web | 3000 | Next.js frontend |
 | API | 3001 | REST API |
 | WebSocket | 3002 | Real-time updates |
-| PostgreSQL | 5432 | Database |
+| PostgreSQL | 5433 | Database |
 | Redis | 6379 | Caching and pub/sub |
 
 ## Available Scripts

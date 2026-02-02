@@ -887,6 +887,27 @@ function OpcodeItem({ opcode }: { opcode: string }) {
   );
 }
 
+// Helper to check if value is a byte array (array of numbers 0-255)
+function isByteArray(arr: any): boolean {
+  return Array.isArray(arr) && arr.length > 0 && arr.every((x: any) => typeof x === 'number' && x >= 0 && x <= 255);
+}
+
+// Helper to flatten nested arrays and extract strings/byte arrays
+function extractProofStrings(arr: any[]): string[] {
+  const results: string[] = [];
+  for (const item of arr) {
+    if (typeof item === 'string') {
+      results.push(item);
+    } else if (isByteArray(item)) {
+      results.push(bytesToHex(item));
+    } else if (Array.isArray(item)) {
+      // Recursively handle nested arrays
+      results.push(...extractProofStrings(item));
+    }
+  }
+  return results;
+}
+
 // Helper to format proof data - returns array of strings for display
 function formatProofData(data: any): string[] {
   const lines: string[] = [];
@@ -897,51 +918,30 @@ function formatProofData(data: any): string[] {
   }
 
   if (Array.isArray(data)) {
-    // Array of strings - each on its own line
-    data.forEach((item) => {
-      if (typeof item === 'string') {
-        lines.push(item);
-      }
-    });
-    if (lines.length > 0) return lines;
+    const extracted = extractProofStrings(data);
+    if (extracted.length > 0) return extracted;
   }
 
   if (typeof data === 'object' && data !== null) {
     // Handle { Proof: { Dlog: [...] } } wrapper format
     if (data.Proof?.Dlog && Array.isArray(data.Proof.Dlog)) {
-      data.Proof.Dlog.forEach((item: any) => {
-        if (typeof item === 'string') {
-          lines.push(item);
-        }
-      });
-      return lines;
+      const extracted = extractProofStrings(data.Proof.Dlog);
+      if (extracted.length > 0) return extracted;
     }
     // Handle { Proof: { Dleq: [...] } } wrapper format
     if (data.Proof?.Dleq && Array.isArray(data.Proof.Dleq)) {
-      data.Proof.Dleq.forEach((item: any) => {
-        if (typeof item === 'string') {
-          lines.push(item);
-        }
-      });
-      return lines;
+      const extracted = extractProofStrings(data.Proof.Dleq);
+      if (extracted.length > 0) return extracted;
     }
     // Handle Dleq format: { Dleq: [string, string, ...] }
     if (data.Dleq && Array.isArray(data.Dleq)) {
-      data.Dleq.forEach((item: any) => {
-        if (typeof item === 'string') {
-          lines.push(item);
-        }
-      });
-      return lines;
+      const extracted = extractProofStrings(data.Dleq);
+      if (extracted.length > 0) return extracted;
     }
     // Handle Dlog format: { Dlog: [string, string, ...] }
     if (data.Dlog && Array.isArray(data.Dlog)) {
-      data.Dlog.forEach((item: any) => {
-        if (typeof item === 'string') {
-          lines.push(item);
-        }
-      });
-      return lines;
+      const extracted = extractProofStrings(data.Dlog);
+      if (extracted.length > 0) return extracted;
     }
   }
 

@@ -933,8 +933,10 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
     return <div className="text-text-muted">Invalid transfer transaction data</div>;
   }
 
-  const witnessCount = transfer.witness_count || (Array.isArray(transfer.witness) ? transfer.witness.length : 0);
-  const hasWitness = witnessCount > 0 || (transfer.witness && transfer.witness.length > 0);
+  // Witness can be at tx.witness or transfer.witness depending on the structure
+  const witnessData = (tx as any).witness || transfer.witness;
+  const witnessCount = transfer.witness_count || (Array.isArray(witnessData) ? witnessData.length : 0);
+  const hasWitness = witnessCount > 0 || (witnessData && Array.isArray(witnessData) && witnessData.length > 0);
   const hasProof = transfer.proof && Object.keys(transfer.proof).length > 0;
 
   // Extract order details from summary
@@ -1076,14 +1078,14 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
       )}
 
       {/* Witness */}
-      {hasWitness && Array.isArray(transfer.witness) && transfer.witness.length > 0 && (
+      {hasWitness && Array.isArray(witnessData) && witnessData.length > 0 && (
         <div>
           <h4 className="text-sm font-medium text-text-secondary uppercase mb-2 flex items-center gap-2">
             <Eye className="w-4 h-4" />
             Witness ({witnessCount})
           </h4>
           <div className="space-y-2">
-            {transfer.witness.map((wit: any, idx: number) => (
+            {witnessData.map((wit: any, idx: number) => (
               <WitnessItem key={idx} witness={wit} index={idx} />
             ))}
           </div>

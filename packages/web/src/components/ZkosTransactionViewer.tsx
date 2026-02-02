@@ -17,6 +17,9 @@ import {
   TrendingUp,
   TrendingDown,
   FileText,
+  Shield,
+  Eye,
+  ClipboardList,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -914,8 +917,9 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
 }
 
 // Transfer transaction viewer
-function TransferViewer({ tx }: { tx: TransferTransaction }) {
-  const [showDetails, setShowDetails] = useState(false);
+function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: ZkosSummary }) {
+  const [showWitness, setShowWitness] = useState(false);
+  const [showProof, setShowProof] = useState(false);
   const [showRawJson, setShowRawJson] = useState(false);
   const transfer = tx.TransactionTransfer;
 
@@ -923,9 +927,41 @@ function TransferViewer({ tx }: { tx: TransferTransaction }) {
     return <div className="text-text-muted">Invalid transfer transaction data</div>;
   }
 
+  const witnessCount = transfer.witness_count || (Array.isArray(transfer.witness) ? transfer.witness.length : 0);
+  const hasWitness = witnessCount > 0 || (transfer.witness && transfer.witness.length > 0);
+  const hasProof = transfer.proof && Object.keys(transfer.proof).length > 0;
+
+  // Extract order details from summary
+  const orderType = summary?.order_type;
+  const programType = summary?.program_type;
+
+  // Extract order side and position size from Memo outputs
+  let orderSide: string | undefined;
+  let positionSize: number | undefined;
+  let entryPrice: number | undefined;
+  let leverage: string | number | undefined;
+
+  if (transfer.outputs) {
+    for (const output of transfer.outputs) {
+      const memo = output.output?.Memo;
+      if (memo?.data) {
+        const memoData = extractValue(memo.data);
+        if (Array.isArray(memoData) && memoData.length > 0) {
+          const firstItem = memoData[0];
+          if (firstItem?.order_side) orderSide = firstItem.order_side;
+          if (firstItem?.position_size !== undefined) positionSize = firstItem.position_size;
+          if (firstItem?.entry_price !== undefined) entryPrice = firstItem.entry_price;
+          if (firstItem?.leverage !== undefined) leverage = firstItem.leverage;
+        }
+      }
+    }
+  }
+
+  const hasOrderDetails = orderType || programType || orderSide || positionSize !== undefined;
+
   return (
     <div className="space-y-4">
-      {/* Summary */}
+      {/* Basic Info Summary */}
       <div className="flex flex-wrap gap-4 text-sm">
         <div className="bg-background-secondary rounded-lg px-3 py-2">
           <span className="text-text-secondary">Version: </span>
@@ -940,6 +976,68 @@ function TransferViewer({ tx }: { tx: TransferTransaction }) {
           <span className="text-white font-medium">{safeString(transfer.maturity)}</span>
         </div>
       </div>
+
+      {/* Order Details Section */}
+      {hasOrderDetails && (
+        <div className="bg-background-secondary rounded-lg p-4 border border-border/50">
+          <h4 className="text-sm font-medium text-text-secondary uppercase mb-3 flex items-center gap-2">
+            <ClipboardList className="w-4 h-4" />
+            Order Details
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {orderType && (
+              <div>
+                <span className="text-text-muted text-xs block mb-1">Order Type</span>
+                <span className="text-white font-medium">{orderType}</span>
+              </div>
+            )}
+            {programType && (
+              <div>
+                <span className="text-text-muted text-xs block mb-1">Program Type</span>
+                <span className="text-white font-medium">{programType}</span>
+              </div>
+            )}
+            {orderSide && (
+              <div>
+                <span className="text-text-muted text-xs block mb-1">Order Side</span>
+                <span
+                  className={clsx(
+                    'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold uppercase',
+                    orderSide.toLowerCase() === 'long' && 'bg-accent-green/20 text-accent-green',
+                    orderSide.toLowerCase() === 'short' && 'bg-accent-orange/20 text-accent-orange'
+                  )}
+                >
+                  {orderSide.toLowerCase() === 'long' && <TrendingUp className="w-3 h-3" />}
+                  {orderSide.toLowerCase() === 'short' && <TrendingDown className="w-3 h-3" />}
+                  {orderSide}
+                </span>
+              </div>
+            )}
+            {positionSize !== undefined && (
+              <div>
+                <span className="text-text-muted text-xs block mb-1">Position Size</span>
+                <span className="text-white font-medium">{formatPositionSize(positionSize)}</span>
+              </div>
+            )}
+            {entryPrice !== undefined && (
+              <div>
+                <span className="text-text-muted text-xs block mb-1">Entry Price</span>
+                <span className="text-white font-medium">{formatPrice(entryPrice)}</span>
+              </div>
+            )}
+            {leverage !== undefined && (
+              <div>
+                <span className="text-text-muted text-xs block mb-1">Leverage</span>
+                <span className="text-accent-yellow font-medium">
+                  {typeof leverage === 'string' && leverage.includes('encrypted')
+                    ? '(encrypted)'
+                    : `${leverage}x`}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Inputs */}
       {transfer.inputs && transfer.inputs.length > 0 && (
@@ -971,38 +1069,91 @@ function TransferViewer({ tx }: { tx: TransferTransaction }) {
         </div>
       )}
 
-      {/* Technical Details (collapsible) */}
-      <div>
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
-        >
-          {showDetails ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
-          Technical Details
-        </button>
-        {showDetails && (
-          <div className="mt-2 bg-background-secondary rounded-lg p-3 text-sm space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-text-secondary">Witness Count:</span>
-              <span className="text-white">
-                {safeString(transfer.witness_count) || (Array.isArray(transfer.witness) ? transfer.witness.length : 0)}
-              </span>
-            </div>
-            {transfer.proof && (
-              <div className="flex items-center gap-2">
-                <span className="text-text-secondary">Proof Type:</span>
-                <span className="text-white">
-                  {transfer.proof.delta_dleq ? 'DarkTxProof' : 'ShuffleTxProof'}
-                </span>
-              </div>
+      {/* Witness Section (collapsible) */}
+      {hasWitness && (
+        <div>
+          <button
+            onClick={() => setShowWitness(!showWitness)}
+            className="flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
+          >
+            {showWitness ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
             )}
-          </div>
-        )}
-      </div>
+            <Eye className="w-4 h-4" />
+            Witness Data ({witnessCount} {witnessCount === 1 ? 'witness' : 'witnesses'})
+          </button>
+          {showWitness && (
+            <div className="mt-2 bg-background-secondary rounded-lg p-3 border border-border/50">
+              {Array.isArray(transfer.witness) && transfer.witness.length > 0 ? (
+                <div className="space-y-2">
+                  {transfer.witness.map((wit: any, idx: number) => (
+                    <div key={idx} className="bg-background-primary/30 rounded p-2">
+                      <div className="text-xs text-text-muted mb-1">Witness #{idx + 1}</div>
+                      <pre className="text-xs text-text-secondary overflow-x-auto">
+                        {typeof wit === 'string' ? truncateHex(wit, 32, 16) : JSON.stringify(wit, null, 2)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-text-muted text-sm">No witness data available</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Proof Section (collapsible) */}
+      {hasProof && (
+        <div>
+          <button
+            onClick={() => setShowProof(!showProof)}
+            className="flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
+          >
+            {showProof ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+            <Shield className="w-4 h-4" />
+            Proof Data ({transfer.proof?.delta_dleq ? 'DarkTxProof' : 'ShuffleTxProof'})
+          </button>
+          {showProof && (
+            <div className="mt-2 bg-background-secondary rounded-lg p-3 border border-border/50">
+              <div className="space-y-3">
+                {transfer.proof?.delta_dleq && (
+                  <div>
+                    <div className="text-xs text-text-muted mb-1">Delta DLEQ</div>
+                    <pre className="text-xs text-text-secondary bg-background-primary/30 rounded p-2 overflow-x-auto">
+                      {typeof transfer.proof.delta_dleq === 'string'
+                        ? truncateHex(transfer.proof.delta_dleq, 32, 16)
+                        : JSON.stringify(transfer.proof.delta_dleq, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                {transfer.proof?.aggregated_eq_proof && (
+                  <div>
+                    <div className="text-xs text-text-muted mb-1">Aggregated Equality Proof</div>
+                    <pre className="text-xs text-text-secondary bg-background-primary/30 rounded p-2 overflow-x-auto max-h-32">
+                      {typeof transfer.proof.aggregated_eq_proof === 'string'
+                        ? truncateHex(transfer.proof.aggregated_eq_proof, 32, 16)
+                        : JSON.stringify(transfer.proof.aggregated_eq_proof, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                {/* Show full proof JSON if no specific fields are displayed */}
+                {!transfer.proof?.delta_dleq && !transfer.proof?.aggregated_eq_proof && (
+                  <pre className="text-xs text-text-secondary overflow-x-auto max-h-48">
+                    {JSON.stringify(transfer.proof, null, 2)}
+                  </pre>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Raw JSON (collapsible) */}
       <div>
@@ -1034,6 +1185,7 @@ function TransferViewer({ tx }: { tx: TransferTransaction }) {
 
 // Order Summary component for displaying order operations
 function OrderSummary({ summary }: { summary: ZkosSummary }) {
+  const [showOpcodes, setShowOpcodes] = useState(false);
   const operation = safeString(summary.order_operation);
   if (!operation) return null;
 
@@ -1042,6 +1194,7 @@ function OrderSummary({ summary }: { summary: ZkosSummary }) {
   const orderSize = summary.outputs?.[0]?.order_size;
   const orderType = safeString(summary.order_type);
   const programType = safeString(summary.program_type);
+  const programOpcodes = summary.program_opcodes || [];
 
   return (
     <div className={clsx('rounded-lg p-4 mb-4 border border-border/50', config.bgColor)}>
@@ -1073,6 +1226,33 @@ function OrderSummary({ summary }: { summary: ZkosSummary }) {
                 <span className="text-text-muted">Position Size: </span>
                 <span className="text-white font-medium">{formatOrderSize(orderSize)}</span>
               </div>
+            </div>
+          )}
+
+          {/* Program Opcodes */}
+          {programOpcodes.length > 0 && (
+            <div className="mt-3">
+              <button
+                onClick={() => setShowOpcodes(!showOpcodes)}
+                className="flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
+              >
+                {showOpcodes ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+                <Code className="w-4 h-4" />
+                <span>Program Opcodes ({programOpcodes.length})</span>
+              </button>
+              {showOpcodes && (
+                <div className="mt-2 bg-background-primary/30 rounded-lg p-3 border border-border/30">
+                  <div className="flex flex-wrap gap-1.5">
+                    {programOpcodes.map((opcode: string, idx: number) => (
+                      <OpcodeItem key={idx} opcode={opcode} index={idx} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1151,7 +1331,7 @@ export function ZkosTransactionViewer({ data }: ZkosTransactionViewerProps) {
           <OrderSummary summary={data.data?.summary || data.summary!} />
         )}
 
-        {txType === 'Transfer' && <TransferViewer tx={tx} />}
+        {txType === 'Transfer' && <TransferViewer tx={tx} summary={data.data?.summary || data.summary} />}
         {txType === 'Script' && <ScriptViewer tx={tx} summary={data.data?.summary || data.summary} />}
         {txType === 'Message' && (
           <div className="space-y-4">

@@ -131,6 +131,20 @@ router.get('/recent', async (req: Request, res: Response) => {
   }
 });
 
+// Fetch transaction from LCD API
+async function fetchTransactionFromLcd(hash: string): Promise<any | null> {
+  try {
+    const response = await axios.get(
+      `${config.lcdUrl}/cosmos/tx/v1beta1/txs/${hash}`,
+      { timeout: 10000 }
+    );
+    return response.data?.tx_response || null;
+  } catch (error) {
+    console.error('Failed to fetch transaction from LCD:', error);
+    return null;
+  }
+}
+
 // GET /api/txs/:hash - Get transaction by hash
 router.get('/:hash', async (req: Request, res: Response) => {
   try {
@@ -140,8 +154,12 @@ router.get('/:hash', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid transaction hash' });
     }
 
-    const transaction = await prisma.transaction.findUnique({
-      where: { hash },
+    // Try both uppercase and lowercase hash lookups
+    const upperHash = hash.toUpperCase();
+    const lowerHash = hash.toLowerCase();
+
+    let transaction = await prisma.transaction.findUnique({
+      where: { hash: upperHash },
       include: {
         block: {
           select: {
@@ -159,15 +177,82 @@ router.get('/:hash', async (req: Request, res: Response) => {
       },
     });
 
+    // Try lowercase if uppercase not found
     if (!transaction) {
-      return res.status(404).json({ error: 'Transaction not found' });
+      transaction = await prisma.transaction.findUnique({
+        where: { hash: lowerHash },
+        include: {
+          block: {
+            select: {
+              height: true,
+              hash: true,
+              timestamp: true,
+            },
+          },
+          events: {
+            select: {
+              type: true,
+              attributes: true,
+            },
+          },
+        },
+      });
+    }
+
+    // If not in database, fetch from LCD API
+    if (!transaction) {
+      const lcdTx = await fetchTransactionFromLcd(upperHash);
+      if (!lcdTx) {
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+
+      // Format LCD response to match our API format
+      const txBody = lcdTx.tx?.body || {};
+      const txAuthInfo = lcdTx.tx?.auth_info || {};
+      const messages = txBody.messages || [];
+      const messageTypes = messages.map((m: any) => m['@type']);
+      const primaryType = messageTypes[0] || 'unknown';
+
+      // Extract signers
+      const signers: string[] = [];
+      if (txAuthInfo?.signer_infos) {
+        for (const signerInfo of txAuthInfo.signer_infos) {
+          if (signerInfo.public_key?.key) {
+            signers.push(signerInfo.public_key.key);
+          }
+        }
+      }
+
+      return res.json({
+        hash: lcdTx.txhash,
+        blockHeight: parseInt(lcdTx.height, 10),
+        blockTime: lcdTx.timestamp,
+        type: primaryType,
+        messageTypes,
+        messages: messages.map((msg: any) => ({
+          type: msg['@type'],
+          typeName: msg['@type'].split('.').pop(),
+          data: msg,
+        })),
+        fee: txAuthInfo.fee || null,
+        gasUsed: lcdTx.gas_used || '0',
+        gasWanted: lcdTx.gas_wanted || '0',
+        memo: txBody.memo || null,
+        status: lcdTx.code === 0 ? 'success' : 'failed',
+        errorLog: lcdTx.code !== 0 ? lcdTx.raw_log : null,
+        signers,
+        events: lcdTx.events || [],
+        block: null,
+        _source: 'lcd', // Indicates this came from LCD, not indexed
+      });
     }
 
     // Check if this transaction has zkOS transfer data
+    const txHash = transaction.hash;
     let zkosDecodedData = null;
     if (transaction.type.includes('MsgTransferTx')) {
       const zkosTransfer = await prisma.zkosTransfer.findFirst({
-        where: { txHash: hash },
+        where: { txHash },
         select: { decodedData: true, txByteCode: true },
       });
       if (zkosTransfer) {
@@ -186,7 +271,7 @@ router.get('/:hash', async (req: Request, res: Response) => {
             zkosDecodedData = freshData;
             // Update the stored data for future requests
             prisma.zkosTransfer.updateMany({
-              where: { txHash: hash },
+              where: { txHash },
               data: { decodedData: freshData as any },
             }).catch((err) => { console.error('Failed to update stored data:', err); });
           } else {

@@ -740,26 +740,44 @@ function OpcodeItem({ opcode }: { opcode: string }) {
 
 // Witness item component
 function WitnessItem({ witness, index }: { witness: any; index: number }) {
-  const valueWitness = witness?.valueWitness || witness?.value_witness;
-  const sign = valueWitness?.sign;
-  const valueProof = witness?.value_proof || witness?.valueProof;
+  // Handle different witness formats:
+  // - { ValueWitness: { sign, value_proof } } (Script transactions)
+  // - { State: { sign, zero_proof } } (Script transactions)
+  // - { valueWitness: { sign }, value_proof } (Transfer transactions)
+  const valueWitness = witness?.ValueWitness || witness?.valueWitness || witness?.value_witness;
+  const stateWitness = witness?.State;
+
+  // Get sign from either format
+  const sign = valueWitness?.sign || stateWitness?.sign;
+
+  // Get proof from either format
+  const valueProof = valueWitness?.value_proof || witness?.value_proof || witness?.valueProof;
+  const zeroProof = stateWitness?.zero_proof;
+
+  // Determine witness type for display
+  const witnessType = witness?.ValueWitness ? 'Value' : witness?.State ? 'State' : '';
 
   return (
     <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
       <div className="flex items-center gap-2 mb-2">
         <Eye className="w-4 h-4 text-accent-blue" />
         <span className="text-white text-sm font-medium">Witness #{index + 1}</span>
+        {witnessType && (
+          <span className={clsx(
+            'badge text-xs',
+            witnessType === 'Value' ? 'badge-success' : 'badge-warning'
+          )}>
+            {witnessType}
+          </span>
+        )}
       </div>
       <div className="space-y-2 text-sm pl-6">
-        {/* Sign from valueWitness */}
+        {/* Sign */}
         {sign !== undefined && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
             <span className="text-text-secondary min-w-[100px]">Sign:</span>
-            <span className={clsx(
-              'inline-block px-2 py-0.5 rounded text-xs font-mono',
-              sign === 1 || sign === 'positive' ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-orange/20 text-accent-orange'
-            )}>
-              {sign === 1 || sign === 'positive' ? 'Positive (+1)' : sign === -1 || sign === 'negative' ? 'Negative (-1)' : String(sign)}
+            <span className="font-mono text-text-muted break-all text-xs">
+              {truncateHex(String(sign), 32, 16)}
             </span>
           </div>
         )}
@@ -771,13 +789,27 @@ function WitnessItem({ witness, index }: { witness: any; index: number }) {
             <span className="font-mono text-text-muted break-all text-xs">
               {typeof valueProof === 'string'
                 ? truncateHex(valueProof, 32, 16)
-                : JSON.stringify(valueProof, null, 2)}
+                : Array.isArray(valueProof)
+                  ? `[${valueProof.length} elements]`
+                  : JSON.stringify(valueProof, null, 2).slice(0, 100) + '...'}
+            </span>
+          </div>
+        )}
+
+        {/* Zero Proof (for State witness) */}
+        {zeroProof && (
+          <div className="flex items-start gap-2">
+            <span className="text-text-secondary min-w-[100px]">Zero Proof:</span>
+            <span className="font-mono text-text-muted break-all text-xs">
+              {Array.isArray(zeroProof)
+                ? `[${zeroProof.length} elements]`
+                : truncateHex(String(zeroProof), 32, 16)}
             </span>
           </div>
         )}
 
         {/* Show full witness if no specific fields found */}
-        {!sign && !valueProof && (
+        {!sign && !valueProof && !zeroProof && (
           <div className="flex items-start gap-2">
             <span className="text-text-secondary min-w-[100px]">Data:</span>
             <span className="font-mono text-text-muted break-all text-xs">
@@ -890,6 +922,21 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
           <div className="space-y-2">
             {script.outputs.map((output: any, idx: number) => (
               <ScriptOutputItem key={idx} output={output} index={idx} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Witness */}
+      {script.witness && Array.isArray(script.witness) && script.witness.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-text-secondary uppercase mb-2 flex items-center gap-2">
+            <Eye className="w-4 h-4" />
+            Witness ({script.witness_count || script.witness.length})
+          </h4>
+          <div className="space-y-2">
+            {script.witness.map((wit: any, idx: number) => (
+              <WitnessItem key={idx} witness={wit} index={idx} />
             ))}
           </div>
         </div>

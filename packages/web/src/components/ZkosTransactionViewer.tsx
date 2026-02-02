@@ -887,35 +887,6 @@ function OpcodeItem({ opcode }: { opcode: string }) {
   );
 }
 
-// Helper to check if array is a byte array (array of numbers 0-255)
-function isByteArray(arr: any): boolean {
-  return Array.isArray(arr) && arr.length > 0 && arr.every((x: any) => typeof x === 'number' && x >= 0 && x <= 255);
-}
-
-// Helper to flatten and convert nested byte arrays to hex strings
-function flattenToHexStrings(data: any): string[] {
-  const results: string[] = [];
-
-  if (typeof data === 'string') {
-    results.push(data);
-  } else if (isByteArray(data)) {
-    results.push(bytesToHex(data));
-  } else if (Array.isArray(data)) {
-    data.forEach((item) => {
-      if (typeof item === 'string') {
-        results.push(item);
-      } else if (isByteArray(item)) {
-        results.push(bytesToHex(item));
-      } else if (Array.isArray(item)) {
-        // Recursively handle nested arrays
-        results.push(...flattenToHexStrings(item));
-      }
-    });
-  }
-
-  return results;
-}
-
 // Helper to format proof data - returns array of strings for display
 function formatProofData(data: any): string[] {
   const lines: string[] = [];
@@ -926,37 +897,34 @@ function formatProofData(data: any): string[] {
   }
 
   if (Array.isArray(data)) {
-    // Check if it's a byte array
-    if (isByteArray(data)) {
-      lines.push(bytesToHex(data));
-      return lines;
-    }
-    // Array of items - flatten nested byte arrays
-    return flattenToHexStrings(data);
+    // Array of strings - each on its own line
+    data.forEach((item) => {
+      if (typeof item === 'string') {
+        lines.push(item);
+      }
+    });
+    if (lines.length > 0) return lines;
   }
 
   if (typeof data === 'object' && data !== null) {
-    // Handle Proof.Dlog format: { Proof: { Dlog: [...] } }
-    if (data.Proof?.Dlog) {
-      return flattenToHexStrings(data.Proof.Dlog);
-    }
-    // Handle Dlog format: { Dlog: [...] }
-    if (data.Dlog && Array.isArray(data.Dlog)) {
-      return flattenToHexStrings(data.Dlog);
-    }
     // Handle Dleq format: { Dleq: [string, string, ...] }
     if (data.Dleq && Array.isArray(data.Dleq)) {
-      return flattenToHexStrings(data.Dleq);
+      data.Dleq.forEach((item: any) => {
+        if (typeof item === 'string') {
+          lines.push(item);
+        }
+      });
+      return lines;
     }
-    // Handle Proof wrapper with other formats
-    if (data.Proof && typeof data.Proof === 'object') {
-      const proofData = Object.values(data.Proof)[0];
-      if (proofData) {
-        return flattenToHexStrings(proofData);
-      }
+    // Handle Dlog format: { Dlog: [string, string, ...] }
+    if (data.Dlog && Array.isArray(data.Dlog)) {
+      data.Dlog.forEach((item: any) => {
+        if (typeof item === 'string') {
+          lines.push(item);
+        }
+      });
+      return lines;
     }
-    lines.push(JSON.stringify(data, null, 2));
-    return lines;
   }
 
   lines.push(String(data));

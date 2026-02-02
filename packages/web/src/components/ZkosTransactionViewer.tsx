@@ -1108,6 +1108,7 @@ function WitnessItem({ witness, index }: { witness: any; index: number }) {
 function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
   const [showRawJson, setShowRawJson] = useState(false);
   const [showProgram, setShowProgram] = useState(true);
+  const [showProof, setShowProof] = useState(false);
   const script = tx.TransactionScript;
 
   // Get input/output types from summary or from tx data
@@ -1121,6 +1122,7 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
   // Get program/opcodes - prefer human-readable opcodes from summary (decode API)
   const program = summary?.program_opcodes || script.program || script.opcodes || script.code || [];
   const hasProgram = Array.isArray(program) && program.length > 0;
+  const hasProof = script.proof || script.call_proof;
 
   return (
     <div className="space-y-4">
@@ -1224,6 +1226,69 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
               <WitnessItem key={idx} witness={wit} index={idx} />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Proof Section (collapsible) */}
+      {hasProof && (
+        <div>
+          <button
+            onClick={() => setShowProof(!showProof)}
+            className="flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
+          >
+            {showProof ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+            <Shield className="w-4 h-4" />
+            Proof Data
+          </button>
+          {showProof && (
+            <div className="mt-2 bg-background-secondary rounded-lg p-3 border border-border/50 space-y-4">
+              {/* Call Proof */}
+              {script.call_proof && (
+                <div>
+                  <div className="text-xs text-text-muted mb-2 font-medium">Call Proof</div>
+                  <div className="space-y-2 text-sm">
+                    {script.call_proof.network && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-text-muted">Network:</span>
+                        <span className="text-white">{script.call_proof.network}</span>
+                      </div>
+                    )}
+                    {script.call_proof.path && (
+                      <div>
+                        <div className="text-text-muted mb-1">Path (Position: {script.call_proof.path.position}):</div>
+                        <div className="space-y-1 pl-2">
+                          {script.call_proof.path.neighbors?.map((neighbor: string, idx: number) => (
+                            <CopyableText
+                              key={idx}
+                              text={neighbor}
+                              displayText={neighbor}
+                              className="font-mono text-text-secondary text-xs block break-all"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Main Proof (hex string) */}
+              {script.proof && typeof script.proof === 'string' && (
+                <div>
+                  <div className="text-xs text-text-muted mb-2 font-medium">Proof</div>
+                  <CopyableText
+                    text={script.proof}
+                    displayText={script.proof}
+                    className="font-mono text-text-secondary text-xs block break-all"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1341,11 +1406,13 @@ function SummaryDetailsSection({ summary }: { summary: any }) {
     return null;
   }
 
-  // Filter out empty/null values and format for display
-  const entries = Object.entries(summary).filter(([_, value]) => {
+  // Filter out empty/null values and redundant fields
+  const entries = Object.entries(summary).filter(([key, value]) => {
     if (value === null || value === undefined) return false;
     if (Array.isArray(value) && value.length === 0) return false;
     if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return false;
+    // Skip program_opcodes as they're shown in a separate section
+    if (key === 'program_opcodes') return false;
     return true;
   });
 

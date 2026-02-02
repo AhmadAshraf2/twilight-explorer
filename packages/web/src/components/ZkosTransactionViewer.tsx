@@ -907,6 +907,24 @@ function formatProofData(data: any): string[] {
   }
 
   if (typeof data === 'object' && data !== null) {
+    // Handle { Proof: { Dlog: [...] } } wrapper format
+    if (data.Proof?.Dlog && Array.isArray(data.Proof.Dlog)) {
+      data.Proof.Dlog.forEach((item: any) => {
+        if (typeof item === 'string') {
+          lines.push(item);
+        }
+      });
+      return lines;
+    }
+    // Handle { Proof: { Dleq: [...] } } wrapper format
+    if (data.Proof?.Dleq && Array.isArray(data.Proof.Dleq)) {
+      data.Proof.Dleq.forEach((item: any) => {
+        if (typeof item === 'string') {
+          lines.push(item);
+        }
+      });
+      return lines;
+    }
     // Handle Dleq format: { Dleq: [string, string, ...] }
     if (data.Dleq && Array.isArray(data.Dleq)) {
       data.Dleq.forEach((item: any) => {
@@ -937,8 +955,10 @@ function WitnessItem({ witness, index }: { witness: any; index: number }) {
   // - { ValueWitness: { sign, value_proof } } (Script transactions)
   // - { State: { sign, zero_proof } } (Script transactions)
   // - { valueWitness: { sign }, value_proof } (Transfer transactions)
+  // - { Proof: { Dlog: [...] } } (Transfer transactions - simple proof)
   const valueWitness = witness?.ValueWitness || witness?.valueWitness || witness?.value_witness;
   const stateWitness = witness?.State;
+  const proofWitness = witness?.Proof;
 
   // Get sign from either format
   const sign = valueWitness?.sign || stateWitness?.sign;
@@ -948,7 +968,10 @@ function WitnessItem({ witness, index }: { witness: any; index: number }) {
   const zeroProof = stateWitness?.zero_proof;
 
   // Determine witness type for display
-  const witnessType = witness?.ValueWitness ? 'Value' : witness?.State ? 'State' : '';
+  const witnessType = witness?.ValueWitness ? 'Value' : witness?.State ? 'State' : witness?.Proof ? 'Proof' : '';
+
+  // Check if this is a simple Proof witness (has Dlog or Dleq directly)
+  const isProofWitness = proofWitness && (proofWitness.Dlog || proofWitness.Dleq);
 
   return (
     <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
@@ -958,7 +981,7 @@ function WitnessItem({ witness, index }: { witness: any; index: number }) {
         {witnessType && (
           <span className={clsx(
             'badge text-xs',
-            witnessType === 'Value' ? 'badge-success' : 'badge-warning'
+            witnessType === 'Value' ? 'badge-success' : witnessType === 'Proof' ? 'badge-info' : 'badge-warning'
           )}>
             {witnessType}
           </span>
@@ -1011,8 +1034,27 @@ function WitnessItem({ witness, index }: { witness: any; index: number }) {
           </div>
         )}
 
+        {/* Proof witness (Dlog/Dleq format) */}
+        {isProofWitness && (
+          <div className="flex items-start gap-2">
+            <span className="text-text-secondary min-w-[100px]">
+              {proofWitness.Dlog ? 'Dlog:' : 'Dleq:'}
+            </span>
+            <div className="flex-1 space-y-1">
+              {formatProofData(witness).map((line, i) => (
+                <CopyableText
+                  key={i}
+                  text={line}
+                  displayText={line}
+                  className="font-mono text-text-muted text-xs block break-all"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Show full witness if no specific fields found */}
-        {!sign && !valueProof && !zeroProof && (
+        {!sign && !valueProof && !zeroProof && !isProofWitness && (
           <div className="flex items-start gap-2">
             <span className="text-text-secondary min-w-[100px]">Data:</span>
             <span className="font-mono text-text-muted break-all text-xs">

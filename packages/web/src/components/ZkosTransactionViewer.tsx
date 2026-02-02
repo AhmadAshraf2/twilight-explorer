@@ -509,6 +509,9 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
   if (memo) {
     const ownerStr = safeString(memo.owner);
     const scriptAddrStr = safeString(memo.script_address);
+    const commitment = getCommitment(memo.commitment);
+    const memoData = memo.data;
+
     return (
       <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
         <div className="flex items-center gap-2 mb-2">
@@ -522,8 +525,8 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
               <span className="text-text-secondary min-w-[100px]">Owner:</span>
               <CopyableText
                 text={ownerStr}
-                displayText={truncateHex(ownerStr, 16, 12)}
-                className="font-mono text-primary-light"
+                displayText={ownerStr}
+                className="font-mono text-primary-light text-xs break-all"
               />
             </div>
           )}
@@ -532,8 +535,18 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
               <span className="text-text-secondary min-w-[100px]">Script:</span>
               <CopyableText
                 text={scriptAddrStr}
-                displayText={truncateHex(scriptAddrStr, 12, 8)}
-                className="font-mono text-accent-yellow"
+                displayText={scriptAddrStr}
+                className="font-mono text-accent-yellow text-xs break-all"
+              />
+            </div>
+          )}
+          {commitment && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Commitment:</span>
+              <CopyableText
+                text={commitment}
+                displayText={commitment}
+                className="font-mono text-text-muted text-xs break-all"
               />
             </div>
           )}
@@ -541,6 +554,22 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Timebounds:</span>
               <span className="text-white">{safeString(memo.timebounds)}</span>
+            </div>
+          )}
+          {memoData && Array.isArray(memoData) && memoData.length > 0 && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Data:</span>
+              <div className="flex-1 space-y-1">
+                {memoData.map((item: any, i: number) => {
+                  if (typeof item === 'string') {
+                    return <span key={i} className="text-text-muted text-xs block">{item}</span>;
+                  }
+                  if (item?.commitment) {
+                    return <span key={i} className="text-text-muted text-xs block">{safeString(item.commitment)}</span>;
+                  }
+                  return <span key={i} className="text-text-muted text-xs block">{JSON.stringify(item)}</span>;
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -551,6 +580,9 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
   if (state) {
     const ownerStr = safeString(state.owner);
     const scriptAddrStr = safeString(state.script_address);
+    const commitment = getCommitment(state.commitment);
+    const stateVars = state.state_variables;
+
     return (
       <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
         <div className="flex items-center gap-2 mb-2">
@@ -564,8 +596,8 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
               <span className="text-text-secondary min-w-[100px]">Owner:</span>
               <CopyableText
                 text={ownerStr}
-                displayText={truncateHex(ownerStr, 16, 12)}
-                className="font-mono text-primary-light"
+                displayText={ownerStr}
+                className="font-mono text-primary-light text-xs break-all"
               />
             </div>
           )}
@@ -574,8 +606,18 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
               <span className="text-text-secondary min-w-[100px]">Script:</span>
               <CopyableText
                 text={scriptAddrStr}
-                displayText={truncateHex(scriptAddrStr, 12, 8)}
-                className="font-mono text-accent-yellow"
+                displayText={scriptAddrStr}
+                className="font-mono text-accent-yellow text-xs break-all"
+              />
+            </div>
+          )}
+          {commitment && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Commitment:</span>
+              <CopyableText
+                text={commitment}
+                displayText={commitment}
+                className="font-mono text-text-muted text-xs break-all"
               />
             </div>
           )}
@@ -589,6 +631,27 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Timebounds:</span>
               <span className="text-white">{safeString(state.timebounds)}</span>
+            </div>
+          )}
+          {stateVars && Array.isArray(stateVars) && stateVars.length > 0 && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">State Vars:</span>
+              <div className="flex-1 space-y-1">
+                {stateVars.map((sv: any, i: number) => {
+                  const svCommitment = getCommitment(sv?.Commitment);
+                  if (svCommitment) {
+                    return (
+                      <CopyableText
+                        key={i}
+                        text={svCommitment}
+                        displayText={svCommitment}
+                        className="font-mono text-text-muted text-xs block break-all"
+                      />
+                    );
+                  }
+                  return <span key={i} className="text-text-muted text-xs">{JSON.stringify(sv)}</span>;
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -607,6 +670,15 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
   );
 }
 
+// Helper to get commitment value from various formats
+function getCommitment(commitment: any): string | null {
+  if (!commitment) return null;
+  if (typeof commitment === 'string') return commitment;
+  if (commitment.Closed) return commitment.Closed;
+  if (commitment.Open) return commitment.Open;
+  return null;
+}
+
 // Script input item component
 function ScriptInputItem({ input, index }: { input: any; index: number }) {
   const coin = input.input?.Coin;
@@ -617,6 +689,9 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
     const txid = getTxid(coin.utxo);
     const outputIndex = getOutputIndex(coin.utxo);
     const ownerStr = safeString(coin.out_coin?.owner);
+    const encryptC = safeString(coin.out_coin?.encrypt?.c);
+    const encryptD = safeString(coin.out_coin?.encrypt?.d);
+    const witnessIdx = coin.witness;
     const isNullTxid = txid === '0000000000000000000000000000000000000000000000000000000000000000';
 
     return (
@@ -625,6 +700,9 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
           <ArrowDownLeft className="w-4 h-4 text-accent-green" />
           <span className="text-white text-sm font-medium">Input #{index + 1}</span>
           <span className="badge badge-success text-xs">{inType}</span>
+          {witnessIdx !== undefined && (
+            <span className="text-text-muted text-xs">witness: {witnessIdx}</span>
+          )}
         </div>
         <div className="space-y-1 text-sm pl-6">
           {txid && (
@@ -650,8 +728,28 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
               <span className="text-text-secondary min-w-[100px]">Owner:</span>
               <CopyableText
                 text={ownerStr}
-                displayText={truncateHex(ownerStr, 16, 12)}
-                className="font-mono text-primary-light"
+                displayText={ownerStr}
+                className="font-mono text-primary-light text-xs break-all"
+              />
+            </div>
+          )}
+          {encryptC && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Encrypt C:</span>
+              <CopyableText
+                text={encryptC}
+                displayText={encryptC}
+                className="font-mono text-text-muted text-xs break-all"
+              />
+            </div>
+          )}
+          {encryptD && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Encrypt D:</span>
+              <CopyableText
+                text={encryptD}
+                displayText={encryptD}
+                className="font-mono text-text-muted text-xs break-all"
               />
             </div>
           )}
@@ -665,6 +763,11 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
     const outputIndex = getOutputIndex(state.utxo);
     const ownerStr = safeString(state.out_state?.owner);
     const scriptAddrStr = safeString(state.out_state?.script_address);
+    const commitment = getCommitment(state.out_state?.commitment);
+    const nonce = state.out_state?.nonce;
+    const timebounds = state.out_state?.timebounds;
+    const stateVars = state.out_state?.state_variables;
+    const witnessIdx = state.witness;
     const isNullTxid = txid === '0000000000000000000000000000000000000000000000000000000000000000';
 
     return (
@@ -673,6 +776,9 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
           <ArrowDownLeft className="w-4 h-4 text-accent-yellow" />
           <span className="text-white text-sm font-medium">Input #{index + 1}</span>
           <span className="badge badge-warning text-xs">{inType}</span>
+          {witnessIdx !== undefined && (
+            <span className="text-text-muted text-xs">witness: {witnessIdx}</span>
+          )}
         </div>
         <div className="space-y-1 text-sm pl-6">
           {txid && (
@@ -698,8 +804,8 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
               <span className="text-text-secondary min-w-[100px]">Owner:</span>
               <CopyableText
                 text={ownerStr}
-                displayText={truncateHex(ownerStr, 16, 12)}
-                className="font-mono text-primary-light"
+                displayText={ownerStr}
+                className="font-mono text-primary-light text-xs break-all"
               />
             </div>
           )}
@@ -708,9 +814,52 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
               <span className="text-text-secondary min-w-[100px]">Script:</span>
               <CopyableText
                 text={scriptAddrStr}
-                displayText={truncateHex(scriptAddrStr, 12, 8)}
-                className="font-mono text-accent-yellow"
+                displayText={scriptAddrStr}
+                className="font-mono text-accent-yellow text-xs break-all"
               />
+            </div>
+          )}
+          {commitment && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Commitment:</span>
+              <CopyableText
+                text={commitment}
+                displayText={commitment}
+                className="font-mono text-text-muted text-xs break-all"
+              />
+            </div>
+          )}
+          {nonce !== undefined && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Nonce:</span>
+              <span className="text-white">{safeString(nonce)}</span>
+            </div>
+          )}
+          {timebounds !== undefined && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Timebounds:</span>
+              <span className="text-white">{safeString(timebounds)}</span>
+            </div>
+          )}
+          {stateVars && Array.isArray(stateVars) && stateVars.length > 0 && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">State Vars:</span>
+              <div className="flex-1 space-y-1">
+                {stateVars.map((sv: any, i: number) => {
+                  const svCommitment = getCommitment(sv?.Commitment);
+                  if (svCommitment) {
+                    return (
+                      <CopyableText
+                        key={i}
+                        text={svCommitment}
+                        displayText={svCommitment}
+                        className="font-mono text-text-muted text-xs block break-all"
+                      />
+                    );
+                  }
+                  return <span key={i} className="text-text-muted text-xs">{JSON.stringify(sv)}</span>;
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -736,6 +885,51 @@ function OpcodeItem({ opcode }: { opcode: string }) {
       {opcode}
     </span>
   );
+}
+
+// Helper to format proof data - returns array of strings for display
+function formatProofData(data: any): string[] {
+  const lines: string[] = [];
+
+  if (typeof data === 'string') {
+    lines.push(data);
+    return lines;
+  }
+
+  if (Array.isArray(data)) {
+    // Array of strings
+    data.forEach((item) => {
+      if (typeof item === 'string') {
+        lines.push(item);
+      } else if (Array.isArray(item) && item.length === 0) {
+        // Skip empty arrays
+      } else {
+        lines.push(JSON.stringify(item));
+      }
+    });
+    return lines;
+  }
+
+  if (typeof data === 'object' && data !== null) {
+    // Handle Dleq format: { Dleq: [string, string, ...] }
+    if (data.Dleq && Array.isArray(data.Dleq)) {
+      data.Dleq.forEach((item: any) => {
+        if (typeof item === 'string') {
+          lines.push(item);
+        } else if (Array.isArray(item) && item.length === 0) {
+          // Skip empty arrays
+        } else if (item) {
+          lines.push(JSON.stringify(item));
+        }
+      });
+      return lines;
+    }
+    lines.push(JSON.stringify(data, null, 2));
+    return lines;
+  }
+
+  lines.push(String(data));
+  return lines;
 }
 
 // Witness item component
@@ -776,9 +970,11 @@ function WitnessItem({ witness, index }: { witness: any; index: number }) {
         {sign !== undefined && (
           <div className="flex items-start gap-2">
             <span className="text-text-secondary min-w-[100px]">Sign:</span>
-            <span className="font-mono text-text-muted break-all text-xs">
-              {truncateHex(String(sign), 32, 16)}
-            </span>
+            <CopyableText
+              text={String(sign)}
+              displayText={String(sign)}
+              className="font-mono text-text-muted text-xs break-all"
+            />
           </div>
         )}
 
@@ -786,13 +982,16 @@ function WitnessItem({ witness, index }: { witness: any; index: number }) {
         {valueProof && (
           <div className="flex items-start gap-2">
             <span className="text-text-secondary min-w-[100px]">Value Proof:</span>
-            <span className="font-mono text-text-muted break-all text-xs">
-              {typeof valueProof === 'string'
-                ? truncateHex(valueProof, 32, 16)
-                : Array.isArray(valueProof)
-                  ? `[${valueProof.length} elements]`
-                  : JSON.stringify(valueProof, null, 2).slice(0, 100) + '...'}
-            </span>
+            <div className="flex-1 space-y-1">
+              {formatProofData(valueProof).map((line, i) => (
+                <CopyableText
+                  key={i}
+                  text={line}
+                  displayText={line}
+                  className="font-mono text-text-muted text-xs block break-all"
+                />
+              ))}
+            </div>
           </div>
         )}
 
@@ -800,11 +999,16 @@ function WitnessItem({ witness, index }: { witness: any; index: number }) {
         {zeroProof && (
           <div className="flex items-start gap-2">
             <span className="text-text-secondary min-w-[100px]">Zero Proof:</span>
-            <span className="font-mono text-text-muted break-all text-xs">
-              {Array.isArray(zeroProof)
-                ? `[${zeroProof.length} elements]`
-                : truncateHex(String(zeroProof), 32, 16)}
-            </span>
+            <div className="flex-1 space-y-1">
+              {formatProofData(zeroProof).map((line, i) => (
+                <CopyableText
+                  key={i}
+                  text={line}
+                  displayText={line}
+                  className="font-mono text-text-muted text-xs block break-all"
+                />
+              ))}
+            </div>
           </div>
         )}
 

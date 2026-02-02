@@ -145,6 +145,29 @@ async function fetchTransactionFromLcd(hash: string): Promise<any | null> {
   }
 }
 
+// GET /api/txs/types/stats - Get transaction type statistics
+// NOTE: This route MUST be before /:hash to avoid "types" being matched as a hash
+router.get('/types/stats', async (req: Request, res: Response) => {
+  try {
+    const stats = await prisma.transaction.groupBy({
+      by: ['type'],
+      _count: { type: true },
+      orderBy: { _count: { type: 'desc' } },
+      take: 20,
+    });
+
+    res.json(
+      stats.map((s) => ({
+        type: s.type,
+        count: s._count.type,
+      }))
+    );
+  } catch (error) {
+    console.error('Error fetching transaction stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/txs/:hash - Get transaction by hash
 router.get('/:hash', async (req: Request, res: Response) => {
   try {
@@ -291,28 +314,6 @@ router.get('/:hash', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching transaction:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// GET /api/txs/types/stats - Get transaction type statistics
-router.get('/types/stats', async (req: Request, res: Response) => {
-  try {
-    const stats = await prisma.transaction.groupBy({
-      by: ['type'],
-      _count: { type: true },
-      orderBy: { _count: { type: 'desc' } },
-      take: 20,
-    });
-
-    res.json(
-      stats.map((s) => ({
-        type: s.type,
-        count: s._count.type,
-      }))
-    );
-  } catch (error) {
-    console.error('Error fetching transaction stats:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

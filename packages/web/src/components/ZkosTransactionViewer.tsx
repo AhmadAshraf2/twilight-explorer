@@ -1252,6 +1252,207 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
   );
 }
 
+// Proof account display component
+function ProofAccountsSection({ title, accounts }: { title: string; accounts: any[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 text-xs text-text-muted hover:text-white transition-colors font-medium"
+      >
+        {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        {title} ({accounts.length})
+      </button>
+      {expanded && (
+        <div className="mt-2 space-y-2 pl-4">
+          {accounts.map((account: any, idx: number) => (
+            <div key={idx} className="bg-background-primary/30 rounded p-2 text-xs space-y-1">
+              <div className="text-text-muted font-medium">Account #{idx + 1}</div>
+              {account.pk && (
+                <div className="space-y-1">
+                  <div className="flex items-start gap-2">
+                    <span className="text-text-muted min-w-[40px]">gr:</span>
+                    <CopyableText text={account.pk.gr} displayText={account.pk.gr} className="font-mono text-text-secondary break-all" />
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-text-muted min-w-[40px]">grsk:</span>
+                    <CopyableText text={account.pk.grsk} displayText={account.pk.grsk} className="font-mono text-text-secondary break-all" />
+                  </div>
+                </div>
+              )}
+              {account.comm && (
+                <div className="space-y-1">
+                  <div className="flex items-start gap-2">
+                    <span className="text-text-muted min-w-[40px]">c:</span>
+                    <CopyableText text={account.comm.c} displayText={account.comm.c} className="font-mono text-text-secondary break-all" />
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-text-muted min-w-[40px]">d:</span>
+                    <CopyableText text={account.comm.d} displayText={account.comm.d} className="font-mono text-text-secondary break-all" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Proof DLEQ display component
+function ProofDleqSection({ title, data }: { title: string; data: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const proofStrings = formatProofData(data);
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 text-xs text-text-muted hover:text-white transition-colors font-medium"
+      >
+        {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        {title} ({proofStrings.length} elements)
+      </button>
+      {expanded && (
+        <div className="mt-2 space-y-1 pl-4">
+          {proofStrings.map((line, idx) => (
+            <CopyableText
+              key={idx}
+              text={line}
+              displayText={line}
+              className="font-mono text-text-secondary text-xs block break-all"
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Summary/Order Details section component
+function SummaryDetailsSection({ summary }: { summary: any }) {
+  if (!summary || Object.keys(summary).length === 0) return null;
+
+  // Filter out empty/null values and format for display
+  const entries = Object.entries(summary).filter(([_, value]) => {
+    if (value === null || value === undefined) return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+    return true;
+  });
+
+  if (entries.length === 0) return null;
+
+  // Format field name for display (snake_case to Title Case)
+  const formatFieldName = (name: string) => {
+    return name
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Format value for display
+  const formatValue = (key: string, value: any): React.ReactNode => {
+    if (typeof value === 'string') {
+      // Check if it's a long hex string
+      if (value.length > 50 && /^[a-f0-9]+$/i.test(value)) {
+        return (
+          <CopyableText
+            text={value}
+            displayText={value}
+            className="font-mono text-text-secondary text-xs break-all"
+          />
+        );
+      }
+      return <span className="text-white">{value}</span>;
+    }
+    if (typeof value === 'number') {
+      return <span className="text-white font-medium">{value.toLocaleString()}</span>;
+    }
+    if (typeof value === 'boolean') {
+      return <span className={value ? 'text-accent-green' : 'text-accent-red'}>{value ? 'Yes' : 'No'}</span>;
+    }
+    if (Array.isArray(value)) {
+      if (value.length === 0) return null;
+      // Check if it's an array of strings (like program_opcodes)
+      if (value.every(v => typeof v === 'string')) {
+        if (key === 'program_opcodes') {
+          return (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {value.map((opcode, idx) => (
+                <span key={idx} className="px-2 py-0.5 rounded text-xs font-mono bg-background-primary/50 border border-border/30 text-primary-light">
+                  {opcode}
+                </span>
+              ))}
+            </div>
+          );
+        }
+        return (
+          <div className="space-y-1 mt-1">
+            {value.map((item, idx) => (
+              <CopyableText
+                key={idx}
+                text={item}
+                displayText={item}
+                className="font-mono text-text-secondary text-xs block break-all"
+              />
+            ))}
+          </div>
+        );
+      }
+      // Array of objects (like outputs)
+      return (
+        <div className="mt-1 space-y-2">
+          {value.map((item, idx) => (
+            <div key={idx} className="bg-background-primary/30 rounded p-2 text-xs">
+              {Object.entries(item).map(([k, v]) => (
+                <div key={k} className="flex items-start gap-2">
+                  <span className="text-text-muted min-w-[80px]">{formatFieldName(k)}:</span>
+                  <span className="text-white">{typeof v === 'number' ? v.toLocaleString() : String(v)}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (typeof value === 'object') {
+      return (
+        <div className="mt-1 bg-background-primary/30 rounded p-2 text-xs">
+          {Object.entries(value).map(([k, v]) => (
+            <div key={k} className="flex items-start gap-2">
+              <span className="text-text-muted min-w-[80px]">{formatFieldName(k)}:</span>
+              <span className="text-white">{String(v)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return <span className="text-white">{String(value)}</span>;
+  };
+
+  return (
+    <div className="bg-background-secondary rounded-lg p-4 border border-border/50">
+      <h4 className="text-sm font-medium text-text-secondary uppercase mb-3 flex items-center gap-2">
+        <ClipboardList className="w-4 h-4" />
+        Order Details
+      </h4>
+      <div className="space-y-3">
+        {entries.map(([key, value]) => (
+          <div key={key} className="text-sm">
+            <div className="flex items-start gap-2">
+              <span className="text-text-muted min-w-[140px]">{formatFieldName(key)}:</span>
+              <div className="flex-1">{formatValue(key, value)}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Transfer transaction viewer
 function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: ZkosSummary }) {
   const [showProof, setShowProof] = useState(false);
@@ -1267,34 +1468,6 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
   const witnessCount = transfer.witness_count || (Array.isArray(witnessData) ? witnessData.length : 0);
   const hasWitness = witnessCount > 0 || (witnessData && Array.isArray(witnessData) && witnessData.length > 0);
   const hasProof = transfer.proof && Object.keys(transfer.proof).length > 0;
-
-  // Extract order details from summary
-  const orderType = summary?.order_type;
-  const programType = summary?.program_type;
-
-  // Extract order side and position size from Memo outputs
-  let orderSide: string | undefined;
-  let positionSize: number | undefined;
-  let entryPrice: number | undefined;
-  let leverage: string | number | undefined;
-
-  if (transfer.outputs) {
-    for (const output of transfer.outputs) {
-      const memo = output.output?.Memo;
-      if (memo?.data) {
-        const memoData = extractValue(memo.data);
-        if (Array.isArray(memoData) && memoData.length > 0) {
-          const firstItem = memoData[0];
-          if (firstItem?.order_side) orderSide = firstItem.order_side;
-          if (firstItem?.position_size !== undefined) positionSize = firstItem.position_size;
-          if (firstItem?.entry_price !== undefined) entryPrice = firstItem.entry_price;
-          if (firstItem?.leverage !== undefined) leverage = firstItem.leverage;
-        }
-      }
-    }
-  }
-
-  const hasOrderDetails = orderType || programType || orderSide || positionSize !== undefined;
 
   return (
     <div className="space-y-4">
@@ -1314,67 +1487,8 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
         </div>
       </div>
 
-      {/* Order Details Section */}
-      {hasOrderDetails && (
-        <div className="bg-background-secondary rounded-lg p-4 border border-border/50">
-          <h4 className="text-sm font-medium text-text-secondary uppercase mb-3 flex items-center gap-2">
-            <ClipboardList className="w-4 h-4" />
-            Order Details
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {orderType && (
-              <div>
-                <span className="text-text-muted text-xs block mb-1">Order Type</span>
-                <span className="text-white font-medium">{orderType}</span>
-              </div>
-            )}
-            {programType && (
-              <div>
-                <span className="text-text-muted text-xs block mb-1">Program Type</span>
-                <span className="text-white font-medium">{programType}</span>
-              </div>
-            )}
-            {orderSide && (
-              <div>
-                <span className="text-text-muted text-xs block mb-1">Order Side</span>
-                <span
-                  className={clsx(
-                    'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold uppercase',
-                    orderSide.toLowerCase() === 'long' && 'bg-accent-green/20 text-accent-green',
-                    orderSide.toLowerCase() === 'short' && 'bg-accent-orange/20 text-accent-orange'
-                  )}
-                >
-                  {orderSide.toLowerCase() === 'long' && <TrendingUp className="w-3 h-3" />}
-                  {orderSide.toLowerCase() === 'short' && <TrendingDown className="w-3 h-3" />}
-                  {orderSide}
-                </span>
-              </div>
-            )}
-            {positionSize !== undefined && (
-              <div>
-                <span className="text-text-muted text-xs block mb-1">Position Size</span>
-                <span className="text-white font-medium">{formatPositionSize(positionSize)}</span>
-              </div>
-            )}
-            {entryPrice !== undefined && (
-              <div>
-                <span className="text-text-muted text-xs block mb-1">Entry Price</span>
-                <span className="text-white font-medium">{formatPrice(entryPrice)}</span>
-              </div>
-            )}
-            {leverage !== undefined && (
-              <div>
-                <span className="text-text-muted text-xs block mb-1">Leverage</span>
-                <span className="text-accent-yellow font-medium">
-                  {typeof leverage === 'string' && leverage.includes('encrypted')
-                    ? '(encrypted)'
-                    : `${leverage}x`}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Order Details Section - Shows all summary fields */}
+      {summary && <SummaryDetailsSection summary={summary} />}
 
       {/* Inputs */}
       {transfer.inputs && transfer.inputs.length > 0 && (
@@ -1437,35 +1551,85 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
             Proof Data ({transfer.proof?.delta_dleq ? 'DarkTxProof' : 'ShuffleTxProof'})
           </button>
           {showProof && (
-            <div className="mt-2 bg-background-secondary rounded-lg p-3 border border-border/50">
-              <div className="space-y-3">
-                {transfer.proof?.delta_dleq && (
-                  <div>
-                    <div className="text-xs text-text-muted mb-1">Delta DLEQ</div>
-                    <pre className="text-xs text-text-secondary bg-background-primary/30 rounded p-2 overflow-x-auto">
-                      {typeof transfer.proof.delta_dleq === 'string'
-                        ? truncateHex(transfer.proof.delta_dleq, 32, 16)
-                        : JSON.stringify(transfer.proof.delta_dleq, null, 2)}
+            <div className="mt-2 bg-background-secondary rounded-lg p-3 border border-border/50 space-y-4">
+              {/* Receivers Count */}
+              {transfer.proof?.receivers_count !== undefined && (
+                <div className="flex items-center gap-2">
+                  <span className="text-text-muted text-xs">Receivers:</span>
+                  <span className="text-white text-sm font-medium">{transfer.proof.receivers_count}</span>
+                </div>
+              )}
+
+              {/* Delta Accounts */}
+              {transfer.proof?.delta_accounts && transfer.proof.delta_accounts.length > 0 && (
+                <ProofAccountsSection title="Delta Accounts" accounts={transfer.proof.delta_accounts} />
+              )}
+
+              {/* Delta DLEQ */}
+              {transfer.proof?.delta_dleq && (
+                <ProofDleqSection title="Delta DLEQ" data={transfer.proof.delta_dleq} />
+              )}
+
+              {/* Epsilon Accounts */}
+              {transfer.proof?.epsilon_accounts && transfer.proof.epsilon_accounts.length > 0 && (
+                <ProofAccountsSection title="Epsilon Accounts" accounts={transfer.proof.epsilon_accounts} />
+              )}
+
+              {/* Sender Account DLEQ */}
+              {transfer.proof?.sender_account_dleq && (
+                <ProofDleqSection title="Sender Account DLEQ" data={transfer.proof.sender_account_dleq} />
+              )}
+
+              {/* Updated Delta Accounts */}
+              {transfer.proof?.updated_delta_accounts && transfer.proof.updated_delta_accounts.length > 0 && (
+                <ProofAccountsSection title="Updated Delta Accounts" accounts={transfer.proof.updated_delta_accounts} />
+              )}
+
+              {/* Updated Sender Epsilon Accounts */}
+              {transfer.proof?.updated_sender_epsilon_accounts && transfer.proof.updated_sender_epsilon_accounts.length > 0 && (
+                <ProofAccountsSection title="Updated Sender Epsilon Accounts" accounts={transfer.proof.updated_sender_epsilon_accounts} />
+              )}
+
+              {/* Range Proof */}
+              {transfer.proof?.range_proof && transfer.proof.range_proof.length > 0 && (
+                <div>
+                  <div className="text-xs text-text-muted mb-2 font-medium">Range Proof</div>
+                  <div className="space-y-1">
+                    {transfer.proof.range_proof.map((proof: string, idx: number) => (
+                      <CopyableText
+                        key={idx}
+                        text={proof}
+                        displayText={proof}
+                        className="font-mono text-text-secondary text-xs block break-all"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Aggregated Equality Proof */}
+              {transfer.proof?.aggregated_eq_proof && (
+                <div>
+                  <div className="text-xs text-text-muted mb-2 font-medium">Aggregated Equality Proof</div>
+                  <div className="bg-background-primary/30 rounded p-2 overflow-x-auto">
+                    <pre className="text-xs text-text-secondary">
+                      {JSON.stringify(transfer.proof.aggregated_eq_proof, null, 2)}
                     </pre>
                   </div>
-                )}
-                {transfer.proof?.aggregated_eq_proof && (
-                  <div>
-                    <div className="text-xs text-text-muted mb-1">Aggregated Equality Proof</div>
-                    <pre className="text-xs text-text-secondary bg-background-primary/30 rounded p-2 overflow-x-auto max-h-32">
-                      {typeof transfer.proof.aggregated_eq_proof === 'string'
-                        ? truncateHex(transfer.proof.aggregated_eq_proof, 32, 16)
-                        : JSON.stringify(transfer.proof.aggregated_eq_proof, null, 2)}
+                </div>
+              )}
+
+              {/* Updated Output Proof */}
+              {transfer.proof?.updated_output_proof && (
+                <div>
+                  <div className="text-xs text-text-muted mb-2 font-medium">Updated Output Proof</div>
+                  <div className="bg-background-primary/30 rounded p-2 overflow-x-auto">
+                    <pre className="text-xs text-text-secondary">
+                      {JSON.stringify(transfer.proof.updated_output_proof, null, 2)}
                     </pre>
                   </div>
-                )}
-                {/* Show full proof JSON if no specific fields are displayed */}
-                {!transfer.proof?.delta_dleq && !transfer.proof?.aggregated_eq_proof && (
-                  <pre className="text-xs text-text-secondary overflow-x-auto max-h-48">
-                    {JSON.stringify(transfer.proof, null, 2)}
-                  </pre>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>

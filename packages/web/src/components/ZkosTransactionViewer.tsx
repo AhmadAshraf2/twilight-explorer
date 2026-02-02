@@ -215,6 +215,7 @@ function CopyButton({ text, className = '' }: { text: string; className?: string
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
       className={clsx(
         'p-1 rounded hover:bg-background-primary/50 transition-colors',

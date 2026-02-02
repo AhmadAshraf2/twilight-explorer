@@ -737,6 +737,58 @@ function OpcodeItem({ opcode }: { opcode: string }) {
   );
 }
 
+// Witness item component
+function WitnessItem({ witness, index }: { witness: any; index: number }) {
+  const valueWitness = witness?.valueWitness || witness?.value_witness;
+  const sign = valueWitness?.sign;
+  const valueProof = witness?.value_proof || witness?.valueProof;
+
+  return (
+    <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
+      <div className="flex items-center gap-2 mb-2">
+        <Eye className="w-4 h-4 text-accent-blue" />
+        <span className="text-white text-sm font-medium">Witness #{index + 1}</span>
+      </div>
+      <div className="space-y-2 text-sm pl-6">
+        {/* Sign from valueWitness */}
+        {sign !== undefined && (
+          <div className="flex items-center gap-2">
+            <span className="text-text-secondary min-w-[100px]">Sign:</span>
+            <span className={clsx(
+              'inline-block px-2 py-0.5 rounded text-xs font-mono',
+              sign === 1 || sign === 'positive' ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-orange/20 text-accent-orange'
+            )}>
+              {sign === 1 || sign === 'positive' ? 'Positive (+1)' : sign === -1 || sign === 'negative' ? 'Negative (-1)' : String(sign)}
+            </span>
+          </div>
+        )}
+
+        {/* Value Proof */}
+        {valueProof && (
+          <div className="flex items-start gap-2">
+            <span className="text-text-secondary min-w-[100px]">Value Proof:</span>
+            <span className="font-mono text-text-muted break-all text-xs">
+              {typeof valueProof === 'string'
+                ? truncateHex(valueProof, 32, 16)
+                : JSON.stringify(valueProof, null, 2)}
+            </span>
+          </div>
+        )}
+
+        {/* Show full witness if no specific fields found */}
+        {!sign && !valueProof && (
+          <div className="flex items-start gap-2">
+            <span className="text-text-secondary min-w-[100px]">Data:</span>
+            <span className="font-mono text-text-muted break-all text-xs">
+              {typeof witness === 'string' ? truncateHex(witness, 32, 16) : JSON.stringify(witness, null, 2)}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Script transaction viewer
 function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
   const [showRawJson, setShowRawJson] = useState(false);
@@ -872,7 +924,6 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
 
 // Transfer transaction viewer
 function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: ZkosSummary }) {
-  const [showWitness, setShowWitness] = useState(false);
   const [showProof, setShowProof] = useState(false);
   const [showRawJson, setShowRawJson] = useState(false);
   const transfer = tx.TransactionTransfer;
@@ -1023,74 +1074,18 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
         </div>
       )}
 
-      {/* Witness Section (collapsible) */}
-      {hasWitness && (
+      {/* Witness */}
+      {hasWitness && Array.isArray(transfer.witness) && transfer.witness.length > 0 && (
         <div>
-          <button
-            onClick={() => setShowWitness(!showWitness)}
-            className="flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
-          >
-            {showWitness ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
+          <h4 className="text-sm font-medium text-text-secondary uppercase mb-2 flex items-center gap-2">
             <Eye className="w-4 h-4" />
-            Witness Data ({witnessCount} {witnessCount === 1 ? 'witness' : 'witnesses'})
-          </button>
-          {showWitness && (
-            <div className="mt-2 bg-background-secondary rounded-lg p-3 border border-border/50">
-              {Array.isArray(transfer.witness) && transfer.witness.length > 0 ? (
-                <div className="space-y-3">
-                  {transfer.witness.map((wit: any, idx: number) => {
-                    const valueWitness = wit?.valueWitness || wit?.value_witness;
-                    const sign = valueWitness?.sign;
-                    const valueProof = wit?.value_proof || wit?.valueProof;
-
-                    return (
-                      <div key={idx} className="bg-background-primary/30 rounded p-3">
-                        <div className="text-xs text-text-muted mb-2 font-medium">Witness #{idx + 1}</div>
-
-                        {/* Sign from valueWitness */}
-                        {sign !== undefined && (
-                          <div className="mb-2">
-                            <div className="text-xs text-text-muted mb-1">Sign (valueWitness)</div>
-                            <span className={clsx(
-                              'inline-block px-2 py-0.5 rounded text-xs font-mono',
-                              sign === 1 || sign === 'positive' ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-orange/20 text-accent-orange'
-                            )}>
-                              {sign === 1 || sign === 'positive' ? 'Positive (+1)' : sign === -1 || sign === 'negative' ? 'Negative (-1)' : String(sign)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Value Proof */}
-                        {valueProof && (
-                          <div className="mb-2">
-                            <div className="text-xs text-text-muted mb-1">Value Proof</div>
-                            <pre className="text-xs text-text-secondary bg-background-primary/50 rounded p-2 overflow-x-auto max-h-24">
-                              {typeof valueProof === 'string'
-                                ? truncateHex(valueProof, 32, 16)
-                                : JSON.stringify(valueProof, null, 2)}
-                            </pre>
-                          </div>
-                        )}
-
-                        {/* Show full witness if no specific fields found */}
-                        {!sign && !valueProof && (
-                          <pre className="text-xs text-text-secondary overflow-x-auto">
-                            {typeof wit === 'string' ? truncateHex(wit, 32, 16) : JSON.stringify(wit, null, 2)}
-                          </pre>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <span className="text-text-muted text-sm">No witness data available</span>
-              )}
-            </div>
-          )}
+            Witness ({witnessCount})
+          </h4>
+          <div className="space-y-2">
+            {transfer.witness.map((wit: any, idx: number) => (
+              <WitnessItem key={idx} witness={wit} index={idx} />
+            ))}
+          </div>
         </div>
       )}
 

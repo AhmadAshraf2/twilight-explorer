@@ -396,6 +396,8 @@ function InputItem({ input, index }: { input: CoinInput; index: number }) {
   const txid = getTxid(coin.utxo);
   const outputIndex = getOutputIndex(coin.utxo);
   const ownerStr = safeString(coin.out_coin?.owner);
+  const encryptC = safeString(coin.out_coin?.encrypt?.c);
+  const encryptD = safeString(coin.out_coin?.encrypt?.d);
 
   return (
     <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
@@ -426,6 +428,26 @@ function InputItem({ input, index }: { input: CoinInput; index: number }) {
               text={ownerStr}
               displayText={truncateHex(ownerStr, 16, 12)}
               className="font-mono text-primary-light"
+            />
+          </div>
+        )}
+        {encryptC && (
+          <div className="flex items-start gap-2">
+            <span className="text-text-secondary min-w-[60px]">Encrypt C:</span>
+            <CopyableText
+              text={encryptC}
+              displayText={encryptC}
+              className="font-mono text-text-muted text-xs"
+            />
+          </div>
+        )}
+        {encryptD && (
+          <div className="flex items-start gap-2">
+            <span className="text-text-secondary min-w-[60px]">Encrypt D:</span>
+            <CopyableText
+              text={encryptD}
+              displayText={encryptD}
+              className="font-mono text-text-muted text-xs"
             />
           </div>
         )}
@@ -514,6 +536,8 @@ function OutputItem({ output, index }: { output: CoinOutput; index: number }) {
   }
 
   const ownerStr = safeString(coin.owner);
+  const encryptC = safeString(coin.encrypt?.c);
+  const encryptD = safeString(coin.encrypt?.d);
 
   return (
     <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
@@ -530,6 +554,26 @@ function OutputItem({ output, index }: { output: CoinOutput; index: number }) {
               text={ownerStr}
               displayText={truncateHex(ownerStr, 16, 12)}
               className="font-mono text-primary-light"
+            />
+          </div>
+        )}
+        {encryptC && (
+          <div className="flex items-start gap-2">
+            <span className="text-text-secondary min-w-[60px]">Encrypt C:</span>
+            <CopyableText
+              text={encryptC}
+              displayText={encryptC}
+              className="font-mono text-text-muted text-xs"
+            />
+          </div>
+        )}
+        {encryptD && (
+          <div className="flex items-start gap-2">
+            <span className="text-text-secondary min-w-[60px]">Encrypt D:</span>
+            <CopyableText
+              text={encryptD}
+              displayText={encryptD}
+              className="font-mono text-text-muted text-xs"
             />
           </div>
         )}

@@ -1334,17 +1334,28 @@ function ProofDleqSection({ title, data }: { title: string; data: any }) {
 
 // Summary/Order Details section component
 function SummaryDetailsSection({ summary }: { summary: any }) {
-  if (!summary || Object.keys(summary).length === 0) return null;
+  // Debug: Log summary to console
+  console.log('SummaryDetailsSection received:', summary);
+
+  if (!summary || Object.keys(summary).length === 0) {
+    console.log('SummaryDetailsSection: summary is empty or null');
+    return null;
+  }
 
   // Filter out empty/null values and format for display
   const entries = Object.entries(summary).filter(([_, value]) => {
     if (value === null || value === undefined) return false;
     if (Array.isArray(value) && value.length === 0) return false;
-    if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+    if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return false;
     return true;
   });
 
-  if (entries.length === 0) return null;
+  console.log('SummaryDetailsSection entries after filter:', entries);
+
+  if (entries.length === 0) {
+    console.log('SummaryDetailsSection: no valid entries after filtering');
+    return null;
+  }
 
   // Format field name for display (snake_case to Title Case)
   const formatFieldName = (name: string) => {
@@ -1455,6 +1466,10 @@ function SummaryDetailsSection({ summary }: { summary: any }) {
 
 // Transfer transaction viewer
 function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: ZkosSummary }) {
+  // Debug: Log what TransferViewer receives
+  console.log('TransferViewer received summary:', summary);
+  console.log('TransferViewer received tx:', tx);
+
   const [showProof, setShowProof] = useState(false);
   const [showRawJson, setShowRawJson] = useState(false);
   const transfer = tx.TransactionTransfer;

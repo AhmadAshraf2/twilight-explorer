@@ -199,6 +199,37 @@ function getOrderOperationConfig(operation: string) {
   }
 }
 
+// Copy to clipboard with fallback for non-HTTPS
+async function copyToClipboard(text: string): Promise<boolean> {
+  // Try modern clipboard API first
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.error('Clipboard API failed:', err);
+    }
+  }
+
+  // Fallback for non-HTTPS contexts
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const success = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return success;
+  } catch (err) {
+    console.error('Fallback copy failed:', err);
+    return false;
+  }
+}
+
 // Copy button component
 function CopyButton({ text, className = '' }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false);
@@ -206,12 +237,16 @@ function CopyButton({ text, className = '' }: { text: string; className?: string
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(text);
+
+    if (!text) {
+      console.error('No text to copy');
+      return;
+    }
+
+    const success = await copyToClipboard(text);
+    if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
     }
   };
 

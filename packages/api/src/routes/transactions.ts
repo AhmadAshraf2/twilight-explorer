@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import axios from 'axios';
 import { config } from '../config.js';
+import { getCache, setCache, CACHE_TTL, CACHE_KEYS } from '../cache.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -105,6 +106,13 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/recent', async (req: Request, res: Response) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const cacheKey = `cache:txs:recent:${limit}`;
+
+    // Try cache first
+    const cached = await getCache<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     const transactions = await prisma.transaction.findMany({
       orderBy: { blockHeight: 'desc' },
@@ -123,6 +131,9 @@ router.get('/recent', async (req: Request, res: Response) => {
       ...tx,
       gasUsed: tx.gasUsed.toString(),
     }));
+
+    // Cache for 10 seconds
+    setCache(cacheKey, serializedTxs, CACHE_TTL.TXS_LIST).catch(() => {});
 
     res.json(serializedTxs);
   } catch (error) {
@@ -274,34 +285,44 @@ router.get('/:hash', async (req: Request, res: Response) => {
     const txHash = transaction.hash;
     let zkosDecodedData = null;
     if (transaction.type.includes('MsgTransferTx')) {
-      const zkosTransfer = await prisma.zkosTransfer.findFirst({
-        where: { txHash },
-        select: { decodedData: true, txByteCode: true },
-      });
-      if (zkosTransfer) {
-        // Check if stored data has summary, if not fetch fresh
-        const storedData = zkosTransfer.decodedData as any;
-        console.log('Stored data has summary:', !!storedData?.summary, 'has txByteCode:', !!zkosTransfer.txByteCode);
+      // Try to get from cache first
+      const cacheKey = CACHE_KEYS.ZKOS_DECODED(txHash);
+      const cachedZkosData = await getCache<any>(cacheKey);
 
-        if (storedData && storedData.summary) {
-          zkosDecodedData = storedData;
-        } else if (zkosTransfer.txByteCode) {
-          // Fetch fresh decoded data from API
-          console.log('Fetching fresh decoded data from:', config.zkosDecodeUrl);
-          const freshData = await fetchDecodedZkosData(zkosTransfer.txByteCode);
-          console.log('Fresh data received:', !!freshData, 'has summary:', !!freshData?.summary);
-          if (freshData) {
-            zkosDecodedData = freshData;
-            // Update the stored data for future requests
-            prisma.zkosTransfer.updateMany({
-              where: { txHash },
-              data: { decodedData: freshData as any },
-            }).catch((err) => { console.error('Failed to update stored data:', err); });
+      if (cachedZkosData) {
+        zkosDecodedData = cachedZkosData;
+      } else {
+        const zkosTransfer = await prisma.zkosTransfer.findFirst({
+          where: { txHash },
+          select: { decodedData: true, txByteCode: true },
+        });
+        if (zkosTransfer) {
+          // Check if stored data has summary, if not fetch fresh
+          const storedData = zkosTransfer.decodedData as any;
+
+          if (storedData && storedData.summary) {
+            zkosDecodedData = storedData;
+          } else if (zkosTransfer.txByteCode) {
+            // Fetch fresh decoded data from API
+            const freshData = await fetchDecodedZkosData(zkosTransfer.txByteCode);
+            if (freshData) {
+              zkosDecodedData = freshData;
+              // Update the stored data for future requests
+              prisma.zkosTransfer.updateMany({
+                where: { txHash },
+                data: { decodedData: freshData as any },
+              }).catch((err) => { console.error('Failed to update stored data:', err); });
+            } else {
+              zkosDecodedData = storedData;
+            }
           } else {
             zkosDecodedData = storedData;
           }
-        } else {
-          zkosDecodedData = storedData;
+
+          // Cache the decoded data if we have it
+          if (zkosDecodedData) {
+            setCache(cacheKey, zkosDecodedData, CACHE_TTL.ZKOS_DECODED).catch(() => {});
+          }
         }
       }
     }

@@ -194,7 +194,7 @@ router.get('/fragments/live', async (req: Request, res: Response) => {
     if (!response.ok) {
       throw new Error(`LCD API error: ${response.status}`);
     }
-    const data = await response.json();
+    const data = await response.json() as any;
 
     // Transform the data to a more usable format
     const fragments = (data.Fragments || []).map((f: any) => ({

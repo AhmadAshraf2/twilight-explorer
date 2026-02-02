@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { withCache, CACHE_TTL, CACHE_KEYS } from '../cache.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -7,52 +8,60 @@ const prisma = new PrismaClient();
 // GET /api/stats - Get overall chain statistics
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const [
-      latestBlock,
-      totalBlocks,
-      totalTxs,
-      totalAccounts,
-      recentTxCount,
-      txByStatus,
-    ] = await Promise.all([
-      prisma.block.findFirst({ orderBy: { height: 'desc' } }),
-      prisma.block.count(),
-      prisma.transaction.count(),
-      prisma.account.count(),
-      // Transactions in last 24 hours
-      prisma.transaction.count({
-        where: {
-          blockTime: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-        },
-      }),
-      prisma.transaction.groupBy({
-        by: ['status'],
-        _count: { status: true },
-      }),
-    ]);
+    const stats = await withCache(
+      CACHE_KEYS.STATS,
+      CACHE_TTL.STATS,
+      async () => {
+        const [
+          latestBlock,
+          totalBlocks,
+          totalTxs,
+          totalAccounts,
+          recentTxCount,
+          txByStatus,
+        ] = await Promise.all([
+          prisma.block.findFirst({ orderBy: { height: 'desc' } }),
+          prisma.block.count(),
+          prisma.transaction.count(),
+          prisma.account.count(),
+          // Transactions in last 24 hours
+          prisma.transaction.count({
+            where: {
+              blockTime: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+            },
+          }),
+          prisma.transaction.groupBy({
+            by: ['status'],
+            _count: { status: true },
+          }),
+        ]);
 
-    const statusStats = txByStatus.reduce(
-      (acc, s) => {
-        acc[s.status] = s._count.status;
-        return acc;
-      },
-      {} as Record<string, number>
+        const statusStats = txByStatus.reduce(
+          (acc, s) => {
+            acc[s.status] = s._count.status;
+            return acc;
+          },
+          {} as Record<string, number>
+        );
+
+        return {
+          latestBlock: latestBlock
+            ? {
+                height: latestBlock.height,
+                hash: latestBlock.hash,
+                timestamp: latestBlock.timestamp,
+              }
+            : null,
+          totalBlocks,
+          totalTransactions: totalTxs,
+          totalAccounts,
+          transactionsLast24h: recentTxCount,
+          transactionsByStatus: statusStats,
+        };
+      }
     );
 
-    res.json({
-      latestBlock: latestBlock
-        ? {
-            height: latestBlock.height,
-            hash: latestBlock.hash,
-            timestamp: latestBlock.timestamp,
-          }
-        : null,
-      totalBlocks,
-      totalTransactions: totalTxs,
-      totalAccounts,
-      transactionsLast24h: recentTxCount,
-      transactionsByStatus: statusStats,
-    });
+    res.json(stats);
   } catch (error) {
     console.error('Error fetching stats:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -166,47 +175,55 @@ router.get('/charts/transactions', async (req: Request, res: Response) => {
 // GET /api/stats/modules - Get module-level statistics
 router.get('/modules', async (req: Request, res: Response) => {
   try {
-    const [deposits, withdrawals, zkosTransfers, zkosMintBurns, delegateKeys, fragments, activeFragments] =
-      await Promise.all([
-        prisma.btcDeposit.count(),
-        prisma.btcWithdrawal.count(),
-        prisma.zkosTransfer.count(),
-        prisma.zkosMintBurn.count(),
-        prisma.delegateKey.count(),
-        prisma.fragment.count(),
-        // Count distinct fragment IDs from signers (fragments with activity)
-        prisma.fragmentSigner.groupBy({
-          by: ['fragmentId'],
-        }).then(groups => groups.length),
-      ]);
+    const moduleStats = await withCache(
+      CACHE_KEYS.MODULE_STATS,
+      CACHE_TTL.MODULE_STATS,
+      async () => {
+        const [deposits, withdrawals, zkosTransfers, zkosMintBurns, delegateKeys, fragments, activeFragments] =
+          await Promise.all([
+            prisma.btcDeposit.count(),
+            prisma.btcWithdrawal.count(),
+            prisma.zkosTransfer.count(),
+            prisma.zkosMintBurn.count(),
+            prisma.delegateKey.count(),
+            prisma.fragment.count(),
+            // Count distinct fragment IDs from signers (fragments with activity)
+            prisma.fragmentSigner.groupBy({
+              by: ['fragmentId'],
+            }).then(groups => groups.length),
+          ]);
 
-    // Get volume stats
-    const [depositVolume, withdrawalVolume, mintBurnVolume] = await Promise.all([
-      prisma.btcDeposit.aggregate({ _sum: { depositAmount: true } }),
-      prisma.btcWithdrawal.aggregate({ _sum: { withdrawAmount: true } }),
-      prisma.zkosMintBurn.aggregate({ _sum: { btcValue: true } }),
-    ]);
+        // Get volume stats
+        const [depositVolume, withdrawalVolume, mintBurnVolume] = await Promise.all([
+          prisma.btcDeposit.aggregate({ _sum: { depositAmount: true } }),
+          prisma.btcWithdrawal.aggregate({ _sum: { withdrawAmount: true } }),
+          prisma.zkosMintBurn.aggregate({ _sum: { btcValue: true } }),
+        ]);
 
-    res.json({
-      bridge: {
-        deposits,
-        withdrawals,
-        depositVolume: (depositVolume._sum.depositAmount || BigInt(0)).toString(),
-        withdrawalVolume: (withdrawalVolume._sum.withdrawAmount || BigInt(0)).toString(),
-      },
-      forks: {
-        delegateKeys,
-      },
-      volt: {
-        fragments,
-        activeFragments,
-      },
-      zkos: {
-        transfers: zkosTransfers,
-        mintBurns: zkosMintBurns,
-        volume: (mintBurnVolume._sum.btcValue || BigInt(0)).toString(),
-      },
-    });
+        return {
+          bridge: {
+            deposits,
+            withdrawals,
+            depositVolume: (depositVolume._sum.depositAmount || BigInt(0)).toString(),
+            withdrawalVolume: (withdrawalVolume._sum.withdrawAmount || BigInt(0)).toString(),
+          },
+          forks: {
+            delegateKeys,
+          },
+          volt: {
+            fragments,
+            activeFragments,
+          },
+          zkos: {
+            transfers: zkosTransfers,
+            mintBurns: zkosMintBurns,
+            volume: (mintBurnVolume._sum.btcValue || BigInt(0)).toString(),
+          },
+        };
+      }
+    );
+
+    res.json(moduleStats);
   } catch (error) {
     console.error('Error fetching module stats:', error);
     res.status(500).json({ error: 'Internal server error' });

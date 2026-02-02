@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { getCache, setCache, CACHE_TTL, CACHE_KEYS } from '../cache.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -20,6 +21,13 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { page, limit } = paginationSchema.parse(req.query);
     const skip = (page - 1) * limit;
+    const cacheKey = CACHE_KEYS.BLOCKS_LIST(page, limit);
+
+    // Try cache first
+    const cached = await getCache<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
 
     const [blocks, total] = await Promise.all([
       prisma.block.findMany({
@@ -46,7 +54,7 @@ router.get('/', async (req: Request, res: Response) => {
       gasWanted: block.gasWanted.toString(),
     }));
 
-    res.json({
+    const response = {
       data: serializedBlocks,
       pagination: {
         page,
@@ -54,7 +62,12 @@ router.get('/', async (req: Request, res: Response) => {
         total,
         totalPages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    // Cache for 10 seconds
+    setCache(cacheKey, response, CACHE_TTL.BLOCKS_LIST).catch(() => {});
+
+    res.json(response);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid query parameters', details: error.errors });

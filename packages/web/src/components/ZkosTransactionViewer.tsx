@@ -20,6 +20,8 @@ import {
   Shield,
   Eye,
   ClipboardList,
+  Flame,
+  Key,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -1781,6 +1783,248 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
   );
 }
 
+// Message transaction viewer (Burn operations)
+function MessageViewer({ tx, summary }: { tx: any; summary?: any }) {
+  const [showRawJson, setShowRawJson] = useState(false);
+  const [showProof, setShowProof] = useState(false);
+  const message = tx.Message;
+
+  if (!message) {
+    return <div className="text-text-muted">Invalid message transaction data</div>;
+  }
+
+  const msgType = safeString(message.msg_type || summary?.msg_type);
+  const isBurn = msgType?.toLowerCase() === 'burn';
+  const amount = message.proof?.amount || summary?.amount;
+  const fee = message.fee || summary?.fee;
+  const version = message.version ?? summary?.version;
+  const msgData = safeString(message.msg_data || summary?.msg_data);
+  const signature = message.signature?.Signature || message.signature;
+  const encryptScalar = message.proof?.encrypt_scalar;
+
+  // Get input details
+  const input = message.input;
+  const coin = input?.input?.Coin;
+  const txid = coin ? getTxid(coin.utxo) : '';
+  const outputIndex = coin ? getOutputIndex(coin.utxo) : 0;
+  const ownerStr = safeString(coin?.out_coin?.owner);
+  const encryptC = safeString(coin?.out_coin?.encrypt?.c);
+  const encryptD = safeString(coin?.out_coin?.encrypt?.d);
+
+  return (
+    <div className="space-y-4">
+      {/* Burn Summary Banner */}
+      {isBurn && amount && (
+        <div className="bg-accent-orange/10 rounded-lg p-4 border border-accent-orange/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-accent-orange/20">
+              <Flame className="w-6 h-6 text-accent-orange" />
+            </div>
+            <div>
+              <div className="text-accent-orange font-semibold text-lg">
+                {amount.toLocaleString()} sats burned
+              </div>
+              <div className="text-text-secondary text-sm">
+                Burn transaction - removing coins from circulation
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Basic Info Summary */}
+      <div className="flex flex-wrap gap-4 text-sm">
+        <div className="bg-background-secondary rounded-lg px-3 py-2">
+          <span className="text-text-secondary">Version: </span>
+          <span className="text-white font-medium">{safeString(version)}</span>
+        </div>
+        <div className="bg-background-secondary rounded-lg px-3 py-2">
+          <span className="text-text-secondary">Fee: </span>
+          <span className="text-accent-yellow font-medium">{formatSats(fee)}</span>
+        </div>
+        <div className="bg-background-secondary rounded-lg px-3 py-2">
+          <span className="text-text-secondary">Type: </span>
+          <span className={clsx(
+            'font-semibold',
+            isBurn ? 'text-accent-orange' : 'text-white'
+          )}>
+            {msgType || 'Unknown'}
+          </span>
+        </div>
+        {amount && (
+          <div className="bg-background-secondary rounded-lg px-3 py-2">
+            <span className="text-text-secondary">Amount: </span>
+            <span className="text-accent-orange font-medium">{amount.toLocaleString()} sats</span>
+          </div>
+        )}
+      </div>
+
+      {/* Order Details Section - Shows all summary fields */}
+      {summary && <SummaryDetailsSection summary={summary} />}
+
+      {/* Input */}
+      {input && (
+        <div>
+          <h4 className="text-sm font-medium text-text-secondary uppercase mb-2 flex items-center gap-2">
+            <Coins className="w-4 h-4" />
+            Input
+          </h4>
+          <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
+            <div className="flex items-center gap-2 mb-2">
+              <ArrowDownLeft className="w-4 h-4 text-accent-green" />
+              <span className="text-white text-sm font-medium">Coin Input</span>
+              <span className="badge badge-success text-xs">{safeString(input.in_type)}</span>
+            </div>
+            <div className="space-y-1 text-sm pl-6">
+              {txid && (
+                <div className="flex items-start gap-2">
+                  <span className="text-text-secondary min-w-[80px]">UTXO:</span>
+                  <span className="font-mono break-all">
+                    <Link
+                      href={`/txs/${txid}`}
+                      className="text-primary-light hover:text-primary hover:underline"
+                    >
+                      {truncateHex(txid)}
+                    </Link>
+                    <span className="text-text-muted">:{safeString(outputIndex)}</span>
+                  </span>
+                </div>
+              )}
+              {ownerStr && (
+                <div className="flex items-start gap-2">
+                  <span className="text-text-secondary min-w-[80px]">Owner:</span>
+                  <CopyableText
+                    text={ownerStr}
+                    displayText={ownerStr}
+                    className="font-mono text-primary-light text-xs break-all"
+                  />
+                </div>
+              )}
+              {encryptC && (
+                <div className="flex items-start gap-2">
+                  <span className="text-text-secondary min-w-[80px]">Encrypt C:</span>
+                  <CopyableText
+                    text={encryptC}
+                    displayText={encryptC}
+                    className="font-mono text-text-muted text-xs break-all"
+                  />
+                </div>
+              )}
+              {encryptD && (
+                <div className="flex items-start gap-2">
+                  <span className="text-text-secondary min-w-[80px]">Encrypt D:</span>
+                  <CopyableText
+                    text={encryptD}
+                    displayText={encryptD}
+                    className="font-mono text-text-muted text-xs break-all"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Signature */}
+      {signature && (
+        <div>
+          <h4 className="text-sm font-medium text-text-secondary uppercase mb-2 flex items-center gap-2">
+            <Key className="w-4 h-4" />
+            Signature
+          </h4>
+          <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
+            <CopyableText
+              text={safeString(signature)}
+              displayText={safeString(signature)}
+              className="font-mono text-text-muted text-xs break-all"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Proof Section (collapsible) */}
+      {message.proof && (
+        <div>
+          <button
+            onClick={() => setShowProof(!showProof)}
+            className="flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
+          >
+            {showProof ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+            <Shield className="w-4 h-4" />
+            Proof Data
+          </button>
+          {showProof && (
+            <div className="mt-2 bg-background-secondary rounded-lg p-3 border border-border/50 space-y-2">
+              {message.proof.amount !== undefined && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-text-muted min-w-[100px]">Amount:</span>
+                  <span className="text-white font-medium">{message.proof.amount.toLocaleString()} sats</span>
+                </div>
+              )}
+              {encryptScalar && (
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="text-text-muted min-w-[100px]">Encrypt Scalar:</span>
+                  <CopyableText
+                    text={encryptScalar}
+                    displayText={encryptScalar}
+                    className="font-mono text-text-secondary text-xs break-all"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Message Data (if present and different from owner) */}
+      {msgData && msgData !== ownerStr && (
+        <div>
+          <h4 className="text-sm font-medium text-text-secondary uppercase mb-2 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Message Data
+          </h4>
+          <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
+            <CopyableText
+              text={msgData}
+              displayText={msgData}
+              className="font-mono text-text-muted text-xs break-all"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Raw JSON (collapsible) */}
+      <div>
+        <button
+          onClick={() => setShowRawJson(!showRawJson)}
+          className="flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
+        >
+          {showRawJson ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
+          Raw Decoded JSON
+        </button>
+        {showRawJson && (
+          <div className="mt-2 bg-background-secondary rounded-lg p-3 overflow-hidden">
+            <div className="flex justify-end mb-2">
+              <CopyButton text={JSON.stringify(tx, null, 2)} />
+            </div>
+            <pre className="text-xs text-text-secondary overflow-x-auto max-h-96 overflow-y-auto">
+              {JSON.stringify(tx, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Order Summary component for displaying order operations
 function OrderSummary({ summary }: { summary: ZkosSummary }) {
   const [showOpcodes, setShowOpcodes] = useState(false);
@@ -1931,16 +2175,7 @@ export function ZkosTransactionViewer({ data }: ZkosTransactionViewerProps) {
 
         {txType === 'Transfer' && <TransferViewer tx={tx} summary={data.data?.summary || data.summary} />}
         {txType === 'Script' && <ScriptViewer tx={tx} summary={data.data?.summary || data.summary} />}
-        {txType === 'Message' && (
-          <div className="space-y-4">
-            <div className="bg-background-secondary rounded-lg p-3">
-              <span className="text-text-secondary text-sm">Message transaction (burn operation)</span>
-            </div>
-            <pre className="text-sm text-text-secondary overflow-x-auto bg-background-secondary p-3 rounded max-h-40">
-              {JSON.stringify(tx, null, 2)}
-            </pre>
-          </div>
-        )}
+        {txType === 'Message' && <MessageViewer tx={tx} summary={data.data?.summary || data.summary} />}
       </div>
     </div>
   );

@@ -654,7 +654,7 @@ const messageConfigs: Record<string, MessageConfig> = {
           <DataRow label="ZK Oracle Address">
             <AddressLink address={data.zkOracleAddress} truncate={false} />
           </DataRow>
-          <DataRow label="Transaction Fee">
+          <DataRow label="Trading Fee">
             {formatSatoshis(data.txFee)}
           </DataRow>
           {data.txByteCode && !data.zkosDecodedData && (

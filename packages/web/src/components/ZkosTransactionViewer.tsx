@@ -1777,7 +1777,7 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
       </div>
 
       {/* Order Details Section - Shows all summary fields */}
-      {summary && <SummaryDetailsSection summary={summary} />}
+      {summary && <SummaryDetailsSection summary={summary} scriptData={script} />}
 
       {/* Program/Opcodes */}
       {hasProgram && (
@@ -2023,7 +2023,7 @@ function ProofDleqSection({ title, data }: { title: string; data: any }) {
 }
 
 // Summary/Order Details section component
-function SummaryDetailsSection({ summary }: { summary: any }) {
+function SummaryDetailsSection({ summary, scriptData }: { summary: any; scriptData?: any }) {
   if (!summary || Object.keys(summary).length === 0) {
     return null;
   }
@@ -2075,6 +2075,28 @@ function SummaryDetailsSection({ summary }: { summary: any }) {
       extractFromData(input?.input?.Memo?.data);
       // Check input.out_memo?.data (another possible structure)
       extractFromData(input?.out_memo?.data);
+    }
+  }
+
+  // Also check scriptData (actual transaction data) outputs and inputs
+  // This is where memo data with entry_price is typically stored
+  if (scriptData?.outputs && Array.isArray(scriptData.outputs)) {
+    for (const output of scriptData.outputs) {
+      // Check output.output.Memo.data (script output structure)
+      extractFromData(output?.output?.Memo?.data);
+      // Check output.Memo.data
+      extractFromData(output?.Memo?.data);
+    }
+  }
+
+  if (scriptData?.inputs && Array.isArray(scriptData.inputs)) {
+    for (const input of scriptData.inputs) {
+      // Check input.input.Memo.data (script input structure)
+      extractFromData(input?.input?.Memo?.data);
+      // Check input.input.Memo.out_memo.data
+      extractFromData(input?.input?.Memo?.out_memo?.data);
+      // Check input.Memo.data
+      extractFromData(input?.Memo?.data);
     }
   }
 

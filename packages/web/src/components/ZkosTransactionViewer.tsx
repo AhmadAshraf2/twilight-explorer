@@ -154,16 +154,20 @@ function opcodesToHex(opcodes: string[]): string {
 }
 
 // Helper to match program against known relayer programs
-function matchRelayerProgram(script: any): { name: string; index: number; description: string } | null {
-  // Try to get the raw program hex
-  // The script may have 'program' as hex string or byte array
+function matchRelayerProgram(script: any, summary?: any): { name: string; index: number; description: string } | null {
+  // Try to get the raw program hex from multiple sources
   let programHex = '';
 
-  if (typeof script.program === 'string') {
-    // Already a hex string
+  // Priority 1: Check summary.program_opcodes (from decode API)
+  if (summary?.program_opcodes && Array.isArray(summary.program_opcodes)) {
+    programHex = summary.program_opcodes.join('').toLowerCase();
+  }
+  // Priority 2: Check script.program as hex string
+  else if (typeof script?.program === 'string') {
     programHex = script.program.toLowerCase().replace(/^0x/, '');
-  } else if (Array.isArray(script.program)) {
-    // Could be array of bytes or array of opcodes
+  }
+  // Priority 3: Check script.program as byte array
+  else if (Array.isArray(script?.program)) {
     const first = script.program[0];
     if (typeof first === 'number') {
       // Array of bytes - convert to hex
@@ -1071,11 +1075,16 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
 
   // Handle Memo input type
   if (memo) {
-    const ownerStr = safeString(memo.owner);
-    const scriptAddrStr = safeString(memo.script_address);
-    const commitment = getCommitment(memo.commitment);
-    const memoData = memo.data;
+    // Try both direct properties and nested out_memo structure (like Coin uses out_coin)
+    const outMemo = memo.out_memo || memo;
+    const txid = getTxid(memo.utxo);
+    const outputIndex = getOutputIndex(memo.utxo);
+    const ownerStr = safeString(outMemo.owner);
+    const scriptAddrStr = safeString(outMemo.script_address);
+    const commitment = getCommitment(outMemo.commitment);
+    const memoData = outMemo.data;
     const witnessIdx = memo.witness ?? input.witness;
+    const isNullTxid = txid === '0000000000000000000000000000000000000000000000000000000000000000';
 
     return (
       <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
@@ -1088,6 +1097,24 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
           )}
         </div>
         <div className="space-y-1 text-sm pl-6">
+          {txid && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">UTXO:</span>
+              {isNullTxid ? (
+                <span className="text-text-muted font-mono">Genesis</span>
+              ) : (
+                <span className="font-mono break-all">
+                  <Link
+                    href={`/txs/${txid}`}
+                    className="text-primary-light hover:text-primary hover:underline"
+                  >
+                    {truncateHex(txid)}
+                  </Link>
+                  <span className="text-text-muted">:{safeString(outputIndex)}</span>
+                </span>
+              )}
+            </div>
+          )}
           {ownerStr && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Owner:</span>
@@ -1118,10 +1145,10 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
               />
             </div>
           )}
-          {memo.timebounds !== undefined && (
+          {(outMemo.timebounds !== undefined || memo.timebounds !== undefined) && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Timebounds:</span>
-              <span className="text-white">{safeString(memo.timebounds)}</span>
+              <span className="text-white">{safeString(outMemo.timebounds ?? memo.timebounds)}</span>
             </div>
           )}
           {memoData && Array.isArray(memoData) && memoData.length > 0 && (
@@ -1150,6 +1177,14 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+          {memoData && !Array.isArray(memoData) && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Data:</span>
+              <span className="font-mono text-text-muted text-xs break-all">
+                {typeof memoData === 'string' ? memoData : JSON.stringify(memoData)}
+              </span>
             </div>
           )}
         </div>

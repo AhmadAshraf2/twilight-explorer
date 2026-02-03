@@ -240,9 +240,12 @@ function MemoOrderDetails({ data }: { data: MemoOrderData }) {
       {leverage !== undefined && (
         <div className="flex items-center gap-2">
           <span className="text-text-secondary text-sm">Leverage:</span>
-          <span className="text-accent-yellow font-medium">
-            {typeof leverage === 'string' && leverage.includes('encrypted')
-              ? '(encrypted)'
+          <span className={clsx(
+            'font-medium',
+            typeof leverage === 'string' && leverage.length > 20 ? 'text-text-muted text-xs font-mono' : 'text-accent-yellow'
+          )}>
+            {typeof leverage === 'string' && leverage.length > 20
+              ? truncateHex(leverage, 8, 8)
               : `${leverage}x`}
           </span>
         </div>
@@ -320,10 +323,10 @@ function OrderDataDisplay({ items }: { items: any[] }) {
             <span className="text-text-muted text-xs uppercase">Leverage</span>
             <div className={clsx(
               'font-semibold',
-              isLeverageEncrypted ? 'text-text-muted text-xs' : 'text-accent-yellow text-lg'
+              isLeverageEncrypted ? 'text-text-muted text-xs font-mono break-all' : 'text-accent-yellow text-lg'
             )}>
               {isLeverageEncrypted ? (
-                <span className="italic">(encrypted)</span>
+                <span title={String(leverage)}>{truncateHex(String(leverage), 8, 8)}</span>
               ) : (
                 `${leverage}x`
               )}

@@ -972,12 +972,21 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
   const outputType = safeString(output.out_type) || 'Unknown';
   const outputData = output.output;
 
+  // Determine badge class based on output type
+  const getBadgeClass = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('memo')) return 'badge-info';
+    if (lowerType.includes('coin')) return 'badge-success';
+    if (lowerType.includes('state')) return 'badge-warning';
+    return '';
+  };
+
   return (
     <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
       <div className="flex items-center gap-2 mb-2">
         <ArrowUpRight className="w-4 h-4 text-text-secondary" />
         <span className="text-white text-sm font-medium">Output #{index + 1}</span>
-        <span className="badge text-xs">{outputType}</span>
+        <span className={clsx('badge text-xs', getBadgeClass(outputType))}>{outputType}</span>
       </div>
       {outputData && (
         <div className="space-y-1 text-sm pl-6">
@@ -1244,12 +1253,21 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
   // Fallback - show raw input data structure
   const inputData = input.input;
 
+  // Determine badge class based on input type
+  const getInputBadgeClass = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('coin')) return 'badge-success';
+    if (lowerType.includes('state')) return 'badge-warning';
+    if (lowerType.includes('memo')) return 'badge-info';
+    return '';
+  };
+
   return (
     <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
       <div className="flex items-center gap-2 mb-2">
         <ArrowDownLeft className="w-4 h-4 text-text-secondary" />
         <span className="text-white text-sm font-medium">Input #{index + 1}</span>
-        <span className="badge text-xs">{inType}</span>
+        <span className={clsx('badge text-xs', getInputBadgeClass(inType))}>{inType}</span>
       </div>
       {inputData && (
         <div className="space-y-1 text-sm pl-6">

@@ -2053,9 +2053,7 @@ function SummaryDetailsSection({ summary, scriptData }: { summary: any; scriptDa
         if (item?.order_side !== undefined && extractedOrderData.order_side === undefined) {
           extractedOrderData.order_side = item.order_side;
         }
-        if (item?.leverage !== undefined && extractedOrderData.leverage === undefined) {
-          extractedOrderData.leverage = item.leverage;
-        }
+        // Note: leverage is intentionally not extracted as it shows encrypted hex data
       }
     }
   };

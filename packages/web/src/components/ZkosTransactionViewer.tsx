@@ -1547,23 +1547,53 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
   const hasProof = script.proof || script.call_proof;
 
   // Check if program matches a known relayer program
-  const matchedProgram = matchRelayerProgram(script);
+  const matchedProgram = matchRelayerProgram(script, summary);
+
+  // Get program type from summary or matched program
+  const programType = safeString(summary?.program_type) || matchedProgram?.name;
+
+  // Determine the type config for styling based on program type
+  const getProgramTypeConfig = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('createtrader')) {
+      return { color: 'text-accent-green', bgColor: 'bg-accent-green/10', borderColor: 'border-accent-green/30', icon: TrendingUp, desc: 'Creates a new trader order' };
+    }
+    if (lowerType.includes('settletrader')) {
+      return { color: 'text-primary-light', bgColor: 'bg-primary/10', borderColor: 'border-primary/30', icon: Check, desc: 'Settles a trader order' };
+    }
+    if (lowerType.includes('createlend')) {
+      return { color: 'text-accent-blue', bgColor: 'bg-accent-blue/10', borderColor: 'border-accent-blue/30', icon: Coins, desc: 'Creates a new lend order' };
+    }
+    if (lowerType.includes('settlelend')) {
+      return { color: 'text-accent-blue', bgColor: 'bg-accent-blue/10', borderColor: 'border-accent-blue/30', icon: Check, desc: 'Settles a lend order' };
+    }
+    if (lowerType.includes('liquidate')) {
+      return { color: 'text-accent-orange', bgColor: 'bg-accent-orange/10', borderColor: 'border-accent-orange/30', icon: Zap, desc: 'Liquidates an order' };
+    }
+    if (lowerType.includes('relayerinitializer') || lowerType.includes('initializer')) {
+      return { color: 'text-accent-yellow', bgColor: 'bg-accent-yellow/10', borderColor: 'border-accent-yellow/30', icon: Zap, desc: 'Initializes the relayer state' };
+    }
+    return { color: 'text-primary-light', bgColor: 'bg-primary/10', borderColor: 'border-primary/30', icon: Code, desc: 'zkOS Script Transaction' };
+  };
+
+  const programConfig = programType ? getProgramTypeConfig(programType) : null;
+  const ProgramIcon = programConfig?.icon || Code;
 
   return (
     <div className="space-y-4">
-      {/* Matched Relayer Program Banner */}
-      {matchedProgram && (
-        <div className="bg-primary/10 rounded-lg p-4 border border-primary/30">
+      {/* Program Type Banner */}
+      {programType && programConfig && (
+        <div className={clsx('rounded-lg p-4 border', programConfig.bgColor, programConfig.borderColor)}>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/20">
-              <Code className="w-5 h-5 text-primary-light" />
+            <div className={clsx('p-2 rounded-lg', programConfig.bgColor)}>
+              <ProgramIcon className={clsx('w-5 h-5', programConfig.color)} />
             </div>
             <div>
-              <div className="text-primary-light font-semibold">
-                {matchedProgram.name}
+              <div className={clsx('font-semibold', programConfig.color)}>
+                {programType}
               </div>
               <div className="text-text-secondary text-sm">
-                {matchedProgram.description}
+                {programConfig.desc}
               </div>
             </div>
           </div>
@@ -1590,10 +1620,10 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
           <span className="text-text-muted mx-1">→</span>
           <span className="text-accent-blue font-medium">{outputType}</span>
         </div>
-        {matchedProgram && (
+        {programType && (
           <div className="bg-background-secondary rounded-lg px-3 py-2">
             <span className="text-text-secondary">Program: </span>
-            <span className="text-primary-light font-medium">{matchedProgram.name}</span>
+            <span className={clsx('font-medium', programConfig?.color || 'text-primary-light')}>{programType}</span>
           </div>
         )}
         {hasProgram && (

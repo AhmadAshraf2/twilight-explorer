@@ -2028,11 +2028,64 @@ function SummaryDetailsSection({ summary }: { summary: any }) {
     return null;
   }
 
+  // Extract order data from outputs/inputs if not at top level
+  // This handles cases where entry_price, position_size, etc. are nested in memo data
+  const extractedOrderData: Record<string, any> = {};
+
+  // Helper to extract order fields from data array
+  const extractFromData = (data: any) => {
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        if (item?.entry_price !== undefined && extractedOrderData.entry_price === undefined) {
+          extractedOrderData.entry_price = item.entry_price;
+        }
+        if (item?.position_size !== undefined && extractedOrderData.position_size === undefined) {
+          extractedOrderData.position_size = item.position_size;
+        }
+        if (item?.order_side !== undefined && extractedOrderData.order_side === undefined) {
+          extractedOrderData.order_side = item.order_side;
+        }
+        if (item?.leverage !== undefined && extractedOrderData.leverage === undefined) {
+          extractedOrderData.leverage = item.leverage;
+        }
+      }
+    }
+  };
+
+  // Check outputs
+  if (summary.outputs && Array.isArray(summary.outputs)) {
+    for (const output of summary.outputs) {
+      // Check output.data directly
+      extractFromData(output?.data);
+      // Check output.Memo?.data (for Memo outputs)
+      extractFromData(output?.Memo?.data);
+      // Check output.output?.Memo?.data (nested structure)
+      extractFromData(output?.output?.Memo?.data);
+    }
+  }
+
+  // Check inputs (memo data can also be in inputs)
+  if (summary.inputs && Array.isArray(summary.inputs)) {
+    for (const input of summary.inputs) {
+      // Check input.data directly
+      extractFromData(input?.data);
+      // Check input.Memo?.data (for Memo inputs)
+      extractFromData(input?.Memo?.data);
+      // Check input.input?.Memo?.data (nested structure)
+      extractFromData(input?.input?.Memo?.data);
+      // Check input.out_memo?.data (another possible structure)
+      extractFromData(input?.out_memo?.data);
+    }
+  }
+
+  // Merge extracted data with summary (summary values take precedence)
+  const mergedSummary = { ...extractedOrderData, ...summary };
+
   // Define key fields that should be displayed prominently
   const keyFields = ['order_side', 'order_type', 'position_size', 'entry_price', 'program_type', 'tx_type', 'input_type', 'output_type'];
 
   // Filter out empty/null values and redundant fields
-  const allEntries = Object.entries(summary).filter(([key, value]) => {
+  const allEntries = Object.entries(mergedSummary).filter(([key, value]) => {
     if (value === null || value === undefined) return false;
     if (Array.isArray(value) && value.length === 0) return false;
     if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return false;

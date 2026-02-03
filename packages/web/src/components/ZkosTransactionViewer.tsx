@@ -1856,19 +1856,28 @@ function SummaryDetailsSection({ summary }: { summary: any }) {
     return null;
   }
 
+  // Define key fields that should be displayed prominently
+  const keyFields = ['order_side', 'order_type', 'position_size', 'program_type', 'tx_type', 'input_type', 'output_type'];
+
   // Filter out empty/null values and redundant fields
-  const entries = Object.entries(summary).filter(([key, value]) => {
+  const allEntries = Object.entries(summary).filter(([key, value]) => {
     if (value === null || value === undefined) return false;
     if (Array.isArray(value) && value.length === 0) return false;
     if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return false;
     // Skip program_opcodes as they're shown in a separate section
     if (key === 'program_opcodes') return false;
+    // Skip outputs array as it's complex
+    if (key === 'outputs') return false;
     return true;
   });
 
-  if (entries.length === 0) {
+  if (allEntries.length === 0) {
     return null;
   }
+
+  // Separate key fields from other fields
+  const primaryEntries = allEntries.filter(([key]) => keyFields.includes(key));
+  const secondaryEntries = allEntries.filter(([key]) => !keyFields.includes(key));
 
   // Format field name for display (snake_case to Title Case)
   const formatFieldName = (name: string) => {
@@ -1877,104 +1886,239 @@ function SummaryDetailsSection({ summary }: { summary: any }) {
       .replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  // Format value for display
-  const formatValue = (key: string, value: any): React.ReactNode => {
+  // Get styling for order side
+  const getOrderSideStyle = (side: string) => {
+    const lowerSide = side?.toLowerCase();
+    if (lowerSide === 'long') {
+      return { bg: 'bg-accent-green/20', text: 'text-accent-green', icon: TrendingUp };
+    }
+    if (lowerSide === 'short') {
+      return { bg: 'bg-accent-orange/20', text: 'text-accent-orange', icon: TrendingDown };
+    }
+    return { bg: 'bg-primary/20', text: 'text-primary-light', icon: null };
+  };
+
+  // Get styling for order type
+  const getOrderTypeStyle = (type: string) => {
+    const lowerType = type?.toLowerCase() || '';
+    if (lowerType.includes('open')) {
+      return { bg: 'bg-accent-green/20', text: 'text-accent-green' };
+    }
+    if (lowerType.includes('close')) {
+      return { bg: 'bg-accent-orange/20', text: 'text-accent-orange' };
+    }
+    if (lowerType.includes('modify')) {
+      return { bg: 'bg-accent-blue/20', text: 'text-accent-blue' };
+    }
+    return { bg: 'bg-primary/20', text: 'text-primary-light' };
+  };
+
+  // Render a primary field card
+  const renderPrimaryField = (key: string, value: any) => {
+    const label = formatFieldName(key);
+
+    if (key === 'order_side' && typeof value === 'string') {
+      const style = getOrderSideStyle(value);
+      const Icon = style.icon;
+      return (
+        <div key={key} className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30">
+          <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
+          <div className={clsx('inline-flex items-center gap-2 px-3 py-1.5 rounded-md font-semibold', style.bg, style.text)}>
+            {Icon && <Icon className="w-4 h-4" />}
+            {value.toUpperCase()}
+          </div>
+        </div>
+      );
+    }
+
+    if (key === 'order_type' && typeof value === 'string') {
+      const style = getOrderTypeStyle(value);
+      return (
+        <div key={key} className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30">
+          <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
+          <div className={clsx('inline-flex items-center gap-2 px-3 py-1.5 rounded-md font-semibold text-sm', style.bg, style.text)}>
+            {formatFieldName(value)}
+          </div>
+        </div>
+      );
+    }
+
+    if (key === 'position_size') {
+      const displayValue = typeof value === 'number'
+        ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+        : value;
+      return (
+        <div key={key} className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30">
+          <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
+          <div className="text-white font-bold text-xl">{displayValue}</div>
+        </div>
+      );
+    }
+
+    if (key === 'program_type' && typeof value === 'string') {
+      return (
+        <div key={key} className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30 md:col-span-2">
+          <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md font-semibold text-sm bg-primary/20 text-primary-light">
+            <Code className="w-4 h-4" />
+            {value}
+          </div>
+        </div>
+      );
+    }
+
+    if ((key === 'input_type' || key === 'output_type' || key === 'tx_type') && typeof value === 'string') {
+      return (
+        <div key={key} className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30">
+          <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
+          <div className="text-white font-medium">{value}</div>
+        </div>
+      );
+    }
+
+    // Default rendering for other primary fields
+    return (
+      <div key={key} className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30">
+        <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
+        <div className="text-white font-medium">
+          {typeof value === 'number' ? value.toLocaleString() : String(value)}
+        </div>
+      </div>
+    );
+  };
+
+  // Render secondary field
+  const renderSecondaryField = (key: string, value: any) => {
+    const label = formatFieldName(key);
+
     if (typeof value === 'string') {
       // Check if it's a long hex string
       if (value.length > 50 && /^[a-f0-9]+$/i.test(value)) {
         return (
-          <CopyableText
-            text={value}
-            displayText={value}
-            className="font-mono text-text-secondary text-xs break-all"
-          />
-        );
-      }
-      return <span className="text-white">{value}</span>;
-    }
-    if (typeof value === 'number') {
-      return <span className="text-white font-medium">{value.toLocaleString()}</span>;
-    }
-    if (typeof value === 'boolean') {
-      return <span className={value ? 'text-accent-green' : 'text-accent-red'}>{value ? 'Yes' : 'No'}</span>;
-    }
-    if (Array.isArray(value)) {
-      if (value.length === 0) return null;
-      // Check if it's an array of strings (like program_opcodes)
-      if (value.every(v => typeof v === 'string')) {
-        if (key === 'program_opcodes') {
-          return (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {value.map((opcode, idx) => (
-                <span key={idx} className="px-2 py-0.5 rounded text-xs font-mono bg-background-primary/50 border border-border/30 text-primary-light">
-                  {opcode}
-                </span>
-              ))}
-            </div>
-          );
-        }
-        return (
-          <div className="space-y-1 mt-1">
-            {value.map((item, idx) => (
-              <CopyableText
-                key={idx}
-                text={item}
-                displayText={item}
-                className="font-mono text-text-secondary text-xs block break-all"
-              />
-            ))}
+          <div key={key} className="flex items-start gap-2 text-sm">
+            <span className="text-text-muted min-w-[120px]">{label}:</span>
+            <CopyableText
+              text={value}
+              displayText={truncateHex(value, 16, 12)}
+              className="font-mono text-text-secondary text-xs"
+            />
           </div>
         );
       }
-      // Array of objects (like outputs)
       return (
-        <div className="mt-1 space-y-2">
-          {value.map((item, idx) => (
-            <div key={idx} className="bg-background-primary/30 rounded p-2 text-xs">
-              {Object.entries(item).map(([k, v]) => (
-                <div key={k} className="flex items-start gap-2">
-                  <span className="text-text-muted min-w-[80px]">{formatFieldName(k)}:</span>
-                  <span className="text-white">{typeof v === 'number' ? v.toLocaleString() : String(v)}</span>
-                </div>
-              ))}
-            </div>
-          ))}
+        <div key={key} className="flex items-start gap-2 text-sm">
+          <span className="text-text-muted min-w-[120px]">{label}:</span>
+          <span className="text-white">{value}</span>
         </div>
       );
     }
-    if (typeof value === 'object') {
+    if (typeof value === 'number') {
       return (
-        <div className="mt-1 bg-background-primary/30 rounded p-2 text-xs">
-          {Object.entries(value).map(([k, v]) => (
-            <div key={k} className="flex items-start gap-2">
-              <span className="text-text-muted min-w-[80px]">{formatFieldName(k)}:</span>
-              <span className="text-white">{String(v)}</span>
-            </div>
-          ))}
+        <div key={key} className="flex items-start gap-2 text-sm">
+          <span className="text-text-muted min-w-[120px]">{label}:</span>
+          <span className="text-white font-medium">{value.toLocaleString()}</span>
         </div>
       );
     }
-    return <span className="text-white">{String(value)}</span>;
+    if (typeof value === 'boolean') {
+      return (
+        <div key={key} className="flex items-start gap-2 text-sm">
+          <span className="text-text-muted min-w-[120px]">{label}:</span>
+          <span className={value ? 'text-accent-green' : 'text-accent-red'}>{value ? 'Yes' : 'No'}</span>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
     <div className="bg-background-secondary rounded-lg p-4 border border-border/50">
-      <h4 className="text-sm font-medium text-text-secondary uppercase mb-3 flex items-center gap-2">
+      <h4 className="text-sm font-medium text-text-secondary uppercase mb-4 flex items-center gap-2">
         <ClipboardList className="w-4 h-4" />
         Order Details
       </h4>
-      <div className="space-y-3">
-        {entries.map(([key, value]) => (
-          <div key={key} className="text-sm">
-            <div className="flex items-start gap-2">
-              <span className="text-text-muted min-w-[140px]">{formatFieldName(key)}:</span>
-              <div className="flex-1">{formatValue(key, value)}</div>
-            </div>
+
+      {/* Primary fields in a grid */}
+      {primaryEntries.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          {primaryEntries.map(([key, value]) => renderPrimaryField(key, value))}
+        </div>
+      )}
+
+      {/* Secondary fields in a list */}
+      {secondaryEntries.length > 0 && (
+        <div className="space-y-2 pt-3 border-t border-border/30">
+          {secondaryEntries.map(([key, value]) => renderSecondaryField(key, value))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Legacy format value function for backward compatibility
+function formatSummaryValue(key: string, value: any, formatFieldName: (name: string) => string): React.ReactNode {
+  if (typeof value === 'string') {
+    if (value.length > 50 && /^[a-f0-9]+$/i.test(value)) {
+      return (
+        <CopyableText
+          text={value}
+          displayText={value}
+          className="font-mono text-text-secondary text-xs break-all"
+        />
+      );
+    }
+    return <span className="text-white">{value}</span>;
+  }
+  if (typeof value === 'number') {
+    return <span className="text-white font-medium">{value.toLocaleString()}</span>;
+  }
+  if (typeof value === 'boolean') {
+    return <span className={value ? 'text-accent-green' : 'text-accent-red'}>{value ? 'Yes' : 'No'}</span>;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return null;
+    if (value.every(v => typeof v === 'string')) {
+      return (
+        <div className="space-y-1 mt-1">
+          {value.map((item, idx) => (
+            <CopyableText
+              key={idx}
+              text={item}
+              displayText={item}
+              className="font-mono text-text-secondary text-xs block break-all"
+            />
+          ))}
+        </div>
+      );
+    }
+    return (
+      <div className="mt-1 space-y-2">
+        {value.map((item, idx) => (
+          <div key={idx} className="bg-background-primary/30 rounded p-2 text-xs">
+            {Object.entries(item).map(([k, v]) => (
+              <div key={k} className="flex items-start gap-2">
+                <span className="text-text-muted min-w-[80px]">{formatFieldName(k)}:</span>
+                <span className="text-white">{typeof v === 'number' ? v.toLocaleString() : String(v)}</span>
+              </div>
+            ))}
           </div>
         ))}
       </div>
-    </div>
-  );
+    );
+  }
+  if (typeof value === 'object') {
+    return (
+      <div className="mt-1 bg-background-primary/30 rounded p-2 text-xs">
+        {Object.entries(value).map(([k, v]) => (
+          <div key={k} className="flex items-start gap-2">
+            <span className="text-text-muted min-w-[80px]">{formatFieldName(k)}:</span>
+            <span className="text-white">{String(v)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <span className="text-white">{String(value)}</span>;
 }
 
 // Transfer transaction viewer

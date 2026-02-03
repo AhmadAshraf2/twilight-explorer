@@ -100,6 +100,86 @@ function formatPrice(value: number | string | any): string {
   return `$${num.toLocaleString()}`;
 }
 
+// Known relayer programs - maps hex program to human-readable name
+const RELAYER_PROGRAMS: Record<string, { name: string; index: number; description: string }> = {
+  '060a0402000000060a0e0401000000060a0402000000060a0e1013': {
+    name: 'RelayerInitializer',
+    index: 0,
+    description: 'Initializes the relayer state',
+  },
+  '060a0403000000060a0405000000060a0d0e13020202': {
+    name: 'CreateTraderOrder',
+    index: 1,
+    description: 'Creates a new trader order',
+  },
+  '040300000002040300000002040a0000000603000000000a0b04070000000603000000000a04020000000c04020000000a0b04020000000a0c0404000000060a0b0c0302000000050d0307000000050d0407000000050403000000050b0c0406000000050d0407000000050d0403000000050c0e04010000000b0403000000060a0c0402000000060a0e101302': {
+    name: 'SettleTraderOrder',
+    index: 2,
+    description: 'Settles a trader order with positive margin',
+  },
+  '0401000000060a0302000000060a0306000000060a0c0e0403000000060a0304000000060a0307000000060a0c0e100401000000050402000000060a0405000000060a0d0c0402000000060a0403000000060a0d0e1013': {
+    name: 'CreateLendOrder',
+    index: 3,
+    description: 'Creates a new lend order',
+  },
+  '050304000000060a0307000000060a0d0c0302000000060a0306000000060a0d0e0406000000060a0b0403000000060a0c0402000000060a0e100401000000060a0402000000060a0403000000060a0b0c0e101302': {
+    name: 'SettleLendOrder',
+    index: 4,
+    description: 'Settles a lend order',
+  },
+  '0202020202060a0401000000060a0407000000060a0c0e130202020202': {
+    name: 'LiquidateOrder',
+    index: 5,
+    description: 'Liquidates an order',
+  },
+  // Index 6 has the same hex as index 2 (SettleTraderOrder) but with negative margin
+  // We'll match it by index if provided in the future
+};
+
+// Helper to convert opcodes array to hex string for matching
+function opcodesToHex(opcodes: string[]): string {
+  // The opcodes are already in hex format from the decode API (e.g., "06", "0a", "04", etc.)
+  // Just join them together
+  return opcodes.map(op => {
+    // Handle opcodes like "PUSH_4" by converting opcode name to hex if needed
+    // But typically the raw program is already hex bytes
+    const hex = op.toLowerCase().replace(/^0x/, '');
+    // If it's a valid hex byte or sequence, use it
+    if (/^[0-9a-f]+$/.test(hex)) {
+      return hex;
+    }
+    // Otherwise, this might be human-readable opcode - skip matching
+    return '';
+  }).join('');
+}
+
+// Helper to match program against known relayer programs
+function matchRelayerProgram(script: any): { name: string; index: number; description: string } | null {
+  // Try to get the raw program hex
+  // The script may have 'program' as hex string or byte array
+  let programHex = '';
+
+  if (typeof script.program === 'string') {
+    // Already a hex string
+    programHex = script.program.toLowerCase().replace(/^0x/, '');
+  } else if (Array.isArray(script.program)) {
+    // Could be array of bytes or array of opcodes
+    const first = script.program[0];
+    if (typeof first === 'number') {
+      // Array of bytes - convert to hex
+      programHex = script.program.map((b: number) => b.toString(16).padStart(2, '0')).join('');
+    } else if (typeof first === 'string') {
+      // Array of opcodes
+      programHex = opcodesToHex(script.program);
+    }
+  }
+
+  if (!programHex) return null;
+
+  // Check against known programs
+  return RELAYER_PROGRAMS[programHex] || null;
+}
+
 // Format position size
 function formatPositionSize(value: number | string | any): string {
   const extracted = extractValue(value);
@@ -1170,8 +1250,30 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
   const hasProgram = Array.isArray(program) && program.length > 0;
   const hasProof = script.proof || script.call_proof;
 
+  // Check if program matches a known relayer program
+  const matchedProgram = matchRelayerProgram(script);
+
   return (
     <div className="space-y-4">
+      {/* Matched Relayer Program Banner */}
+      {matchedProgram && (
+        <div className="bg-primary/10 rounded-lg p-4 border border-primary/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/20">
+              <Code className="w-5 h-5 text-primary-light" />
+            </div>
+            <div>
+              <div className="text-primary-light font-semibold">
+                {matchedProgram.name}
+              </div>
+              <div className="text-text-secondary text-sm">
+                {matchedProgram.description}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary */}
       <div className="flex flex-wrap gap-4 text-sm">
         <div className="bg-background-secondary rounded-lg px-3 py-2">
@@ -1192,6 +1294,12 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
           <span className="text-text-muted mx-1">→</span>
           <span className="text-accent-blue font-medium">{outputType}</span>
         </div>
+        {matchedProgram && (
+          <div className="bg-background-secondary rounded-lg px-3 py-2">
+            <span className="text-text-secondary">Program: </span>
+            <span className="text-primary-light font-medium">{matchedProgram.name}</span>
+          </div>
+        )}
         {hasProgram && (
           <div className="bg-background-secondary rounded-lg px-3 py-2">
             <span className="text-text-secondary">Opcodes: </span>

@@ -157,7 +157,7 @@ export default function TransactionDetailPage() {
       {/* Fee */}
       {tx.fee && tx.fee.amount && tx.fee.amount.length > 0 && (
         <div className="card">
-          <h2 className="card-header">Transaction Fee</h2>
+          <h2 className="card-header">Trading Fee</h2>
           <div className="flex flex-wrap gap-4">
             {tx.fee.amount.map((coin: any, i: number) => (
               <div key={i} className="bg-background-tertiary rounded-lg px-4 py-2">

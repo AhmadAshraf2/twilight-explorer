@@ -247,6 +247,90 @@ function MemoOrderDetails({ data }: { data: MemoOrderData }) {
   );
 }
 
+// Order Data Display component - formats order data from memo items nicely
+function OrderDataDisplay({ items }: { items: any[] }) {
+  // Merge all items into a single object for display
+  const orderData: Record<string, any> = {};
+  items.forEach((item: any) => {
+    if (typeof item === 'object' && item !== null) {
+      Object.assign(orderData, item);
+    }
+  });
+
+  const { position_size, leverage, entry_price, order_side } = orderData;
+  const isLong = order_side?.toLowerCase() === 'long';
+  const isShort = order_side?.toLowerCase() === 'short';
+
+  // Check if leverage looks like an encrypted hex string
+  const isLeverageEncrypted = typeof leverage === 'string' && leverage.length > 20 && /^[0-9a-f]+$/i.test(leverage);
+
+  return (
+    <div className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Order Side */}
+        {order_side && (
+          <div className="space-y-1">
+            <span className="text-text-muted text-xs uppercase">Side</span>
+            <div>
+              <span
+                className={clsx(
+                  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-semibold',
+                  isLong && 'bg-accent-green/20 text-accent-green',
+                  isShort && 'bg-accent-orange/20 text-accent-orange',
+                  !isLong && !isShort && 'bg-primary/20 text-primary-light'
+                )}
+              >
+                {isLong && <TrendingUp className="w-4 h-4" />}
+                {isShort && <TrendingDown className="w-4 h-4" />}
+                {String(order_side).toUpperCase()}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Position Size */}
+        {position_size !== undefined && (
+          <div className="space-y-1">
+            <span className="text-text-muted text-xs uppercase">Position Size</span>
+            <div className="text-white font-semibold text-lg">
+              {typeof position_size === 'number'
+                ? position_size.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+                : position_size}
+            </div>
+          </div>
+        )}
+
+        {/* Entry Price */}
+        {entry_price !== undefined && (
+          <div className="space-y-1">
+            <span className="text-text-muted text-xs uppercase">Entry Price</span>
+            <div className="text-white font-semibold text-lg">
+              ${typeof entry_price === 'number' ? entry_price.toLocaleString() : entry_price}
+            </div>
+          </div>
+        )}
+
+        {/* Leverage */}
+        {leverage !== undefined && (
+          <div className="space-y-1">
+            <span className="text-text-muted text-xs uppercase">Leverage</span>
+            <div className={clsx(
+              'font-semibold',
+              isLeverageEncrypted ? 'text-text-muted text-xs' : 'text-accent-yellow text-lg'
+            )}>
+              {isLeverageEncrypted ? (
+                <span className="italic">(encrypted)</span>
+              ) : (
+                `${leverage}x`
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Get order operation display config
 function getOrderOperationConfig(operation: string) {
   switch (operation) {
@@ -668,6 +752,56 @@ function OutputItem({ output, index }: { output: CoinOutput; index: number }) {
 function ScriptOutputItem({ output, index }: { output: any; index: number }) {
   const memo = output.output?.Memo;
   const state = output.output?.State;
+  const coin = output.output?.Coin;
+
+  // Handle Coin output type
+  if (coin) {
+    const ownerStr = safeString(coin.owner);
+    const encryptC = safeString(coin.encrypt?.c);
+    const encryptD = safeString(coin.encrypt?.d);
+
+    return (
+      <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
+        <div className="flex items-center gap-2 mb-2">
+          <ArrowUpRight className="w-4 h-4 text-accent-green" />
+          <span className="text-white text-sm font-medium">Output #{index + 1}</span>
+          <span className="badge badge-success text-xs">{safeString(output.out_type) || 'Coin'}</span>
+        </div>
+        <div className="space-y-1 text-sm pl-6">
+          {ownerStr && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Owner:</span>
+              <CopyableText
+                text={ownerStr}
+                displayText={ownerStr}
+                className="font-mono text-primary-light text-xs break-all"
+              />
+            </div>
+          )}
+          {encryptC && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Encrypt C:</span>
+              <CopyableText
+                text={encryptC}
+                displayText={encryptC}
+                className="font-mono text-text-muted text-xs break-all"
+              />
+            </div>
+          )}
+          {encryptD && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Encrypt D:</span>
+              <CopyableText
+                text={encryptD}
+                displayText={encryptD}
+                className="font-mono text-text-muted text-xs break-all"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (memo) {
     const ownerStr = safeString(memo.owner);
@@ -720,19 +854,31 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
             </div>
           )}
           {memoData && Array.isArray(memoData) && memoData.length > 0 && (
-            <div className="flex items-start gap-2">
-              <span className="text-text-secondary min-w-[100px]">Data:</span>
-              <div className="flex-1 space-y-1">
-                {memoData.map((item: any, i: number) => {
-                  if (typeof item === 'string') {
-                    return <span key={i} className="text-text-muted text-xs block">{item}</span>;
-                  }
-                  if (item?.commitment) {
-                    return <span key={i} className="text-text-muted text-xs block">{safeString(item.commitment)}</span>;
-                  }
-                  return <span key={i} className="text-text-muted text-xs block">{JSON.stringify(item)}</span>;
-                })}
-              </div>
+            <div className="mt-2">
+              {/* Check if this is order data */}
+              {memoData.some((item: any) =>
+                item?.position_size !== undefined ||
+                item?.order_side !== undefined ||
+                item?.entry_price !== undefined ||
+                item?.leverage !== undefined
+              ) ? (
+                <OrderDataDisplay items={memoData} />
+              ) : (
+                <div className="flex items-start gap-2">
+                  <span className="text-text-secondary min-w-[100px]">Data:</span>
+                  <div className="flex-1 space-y-1">
+                    {memoData.map((item: any, i: number) => {
+                      if (typeof item === 'string') {
+                        return <span key={i} className="text-text-muted text-xs block">{item}</span>;
+                      }
+                      if (item?.commitment) {
+                        return <span key={i} className="text-text-muted text-xs block">{safeString(item.commitment)}</span>;
+                      }
+                      return <span key={i} className="text-text-muted text-xs block">{JSON.stringify(item)}</span>;
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -822,13 +968,78 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
     );
   }
 
+  // Fallback - show raw output data structure
+  const outputType = safeString(output.out_type) || 'Unknown';
+  const outputData = output.output;
+
   return (
     <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-2">
         <ArrowUpRight className="w-4 h-4 text-text-secondary" />
         <span className="text-white text-sm font-medium">Output #{index + 1}</span>
-        <span className="badge text-xs">{safeString(output.out_type)}</span>
+        <span className="badge text-xs">{outputType}</span>
       </div>
+      {outputData && (
+        <div className="space-y-1 text-sm pl-6">
+          {/* Try to extract common fields from any output type */}
+          {Object.entries(outputData).map(([key, value]: [string, any]) => {
+            if (value && typeof value === 'object') {
+              // Handle nested objects like Coin, State, Memo
+              const ownerStr = safeString(value.owner);
+              const encryptC = safeString(value.encrypt?.c);
+              const encryptD = safeString(value.encrypt?.d);
+              const commitment = getCommitment(value.commitment);
+
+              return (
+                <div key={key} className="space-y-1">
+                  <span className="text-text-muted text-xs uppercase">{key}</span>
+                  {ownerStr && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-text-secondary min-w-[100px]">Owner:</span>
+                      <CopyableText
+                        text={ownerStr}
+                        displayText={ownerStr}
+                        className="font-mono text-primary-light text-xs break-all"
+                      />
+                    </div>
+                  )}
+                  {encryptC && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-text-secondary min-w-[100px]">Encrypt C:</span>
+                      <CopyableText
+                        text={encryptC}
+                        displayText={encryptC}
+                        className="font-mono text-text-muted text-xs break-all"
+                      />
+                    </div>
+                  )}
+                  {encryptD && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-text-secondary min-w-[100px]">Encrypt D:</span>
+                      <CopyableText
+                        text={encryptD}
+                        displayText={encryptD}
+                        className="font-mono text-text-muted text-xs break-all"
+                      />
+                    </div>
+                  )}
+                  {commitment && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-text-secondary min-w-[100px]">Commitment:</span>
+                      <CopyableText
+                        text={commitment}
+                        displayText={commitment}
+                        className="font-mono text-text-muted text-xs break-all"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1030,13 +1241,98 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
     );
   }
 
+  // Fallback - show raw input data structure
+  const inputData = input.input;
+
   return (
     <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-2">
         <ArrowDownLeft className="w-4 h-4 text-text-secondary" />
         <span className="text-white text-sm font-medium">Input #{index + 1}</span>
         <span className="badge text-xs">{inType}</span>
       </div>
+      {inputData && (
+        <div className="space-y-1 text-sm pl-6">
+          {/* Try to extract common fields from any input type */}
+          {Object.entries(inputData).map(([key, value]: [string, any]) => {
+            if (value && typeof value === 'object') {
+              // Handle nested objects
+              const txid = getTxid(value.utxo);
+              const outputIndex = getOutputIndex(value.utxo);
+              const ownerStr = safeString(value.out_coin?.owner || value.out_state?.owner || value.owner);
+              const encryptC = safeString(value.out_coin?.encrypt?.c || value.encrypt?.c);
+              const encryptD = safeString(value.out_coin?.encrypt?.d || value.encrypt?.d);
+              const commitment = getCommitment(value.out_state?.commitment || value.commitment);
+              const isNullTxid = txid === '0000000000000000000000000000000000000000000000000000000000000000';
+
+              return (
+                <div key={key} className="space-y-1">
+                  <span className="text-text-muted text-xs uppercase">{key}</span>
+                  {txid && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-text-secondary min-w-[100px]">UTXO:</span>
+                      {isNullTxid ? (
+                        <span className="text-text-muted font-mono">Genesis</span>
+                      ) : (
+                        <span className="font-mono">
+                          <Link
+                            href={`/txs/${txid}`}
+                            className="text-primary-light hover:text-primary hover:underline"
+                          >
+                            {truncateHex(txid)}
+                          </Link>
+                          <span className="text-text-muted">:{safeString(outputIndex)}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {ownerStr && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-text-secondary min-w-[100px]">Owner:</span>
+                      <CopyableText
+                        text={ownerStr}
+                        displayText={ownerStr}
+                        className="font-mono text-primary-light text-xs break-all"
+                      />
+                    </div>
+                  )}
+                  {encryptC && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-text-secondary min-w-[100px]">Encrypt C:</span>
+                      <CopyableText
+                        text={encryptC}
+                        displayText={encryptC}
+                        className="font-mono text-text-muted text-xs break-all"
+                      />
+                    </div>
+                  )}
+                  {encryptD && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-text-secondary min-w-[100px]">Encrypt D:</span>
+                      <CopyableText
+                        text={encryptD}
+                        displayText={encryptD}
+                        className="font-mono text-text-muted text-xs break-all"
+                      />
+                    </div>
+                  )}
+                  {commitment && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-text-secondary min-w-[100px]">Commitment:</span>
+                      <CopyableText
+                        text={commitment}
+                        displayText={commitment}
+                        className="font-mono text-text-muted text-xs break-all"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1697,8 +1993,53 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
   const hasWitness = witnessCount > 0 || (witnessData && Array.isArray(witnessData) && witnessData.length > 0);
   const hasProof = transfer.proof && Object.keys(transfer.proof).length > 0;
 
+  // Get program/order type from summary
+  const orderType = safeString(summary?.order_type);
+  const programType = safeString(summary?.program_type);
+  const displayType = orderType || programType;
+
+  // Determine the type config for styling
+  const getTypeConfig = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('trader') || lowerType.includes('trade')) {
+      return { color: 'text-accent-green', bgColor: 'bg-accent-green/10', borderColor: 'border-accent-green/30', icon: TrendingUp };
+    }
+    if (lowerType.includes('lend')) {
+      return { color: 'text-accent-blue', bgColor: 'bg-accent-blue/10', borderColor: 'border-accent-blue/30', icon: Coins };
+    }
+    if (lowerType.includes('liquidate')) {
+      return { color: 'text-accent-orange', bgColor: 'bg-accent-orange/10', borderColor: 'border-accent-orange/30', icon: Zap };
+    }
+    if (lowerType.includes('settle')) {
+      return { color: 'text-primary-light', bgColor: 'bg-primary/10', borderColor: 'border-primary/30', icon: Check };
+    }
+    return { color: 'text-primary-light', bgColor: 'bg-primary/10', borderColor: 'border-primary/30', icon: FileCode };
+  };
+
+  const typeConfig = displayType ? getTypeConfig(displayType) : null;
+  const TypeIcon = typeConfig?.icon || FileCode;
+
   return (
     <div className="space-y-4">
+      {/* Program/Order Type Banner */}
+      {displayType && typeConfig && (
+        <div className={clsx('rounded-lg p-4 border', typeConfig.bgColor, typeConfig.borderColor)}>
+          <div className="flex items-center gap-3">
+            <div className={clsx('p-2 rounded-lg', typeConfig.bgColor)}>
+              <TypeIcon className={clsx('w-5 h-5', typeConfig.color)} />
+            </div>
+            <div>
+              <div className={clsx('font-semibold', typeConfig.color)}>
+                {displayType}
+              </div>
+              <div className="text-text-secondary text-sm">
+                zkOS Transfer Transaction
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Basic Info Summary */}
       <div className="flex flex-wrap gap-4 text-sm">
         <div className="bg-background-secondary rounded-lg px-3 py-2">
@@ -1713,6 +2054,12 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
           <span className="text-text-secondary">Maturity: </span>
           <span className="text-white font-medium">{safeString(transfer.maturity)}</span>
         </div>
+        {displayType && (
+          <div className="bg-background-secondary rounded-lg px-3 py-2">
+            <span className="text-text-secondary">Type: </span>
+            <span className={clsx('font-medium', typeConfig?.color)}>{displayType}</span>
+          </div>
+        )}
       </div>
 
       {/* Order Details Section - Shows all summary fields */}

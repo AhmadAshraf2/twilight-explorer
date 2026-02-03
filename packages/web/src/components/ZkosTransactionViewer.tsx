@@ -2029,7 +2029,7 @@ function SummaryDetailsSection({ summary }: { summary: any }) {
   }
 
   // Define key fields that should be displayed prominently
-  const keyFields = ['order_side', 'order_type', 'position_size', 'program_type', 'tx_type', 'input_type', 'output_type'];
+  const keyFields = ['order_side', 'order_type', 'position_size', 'entry_price', 'program_type', 'tx_type', 'input_type', 'output_type'];
 
   // Filter out empty/null values and redundant fields
   const allEntries = Object.entries(summary).filter(([key, value]) => {
@@ -2123,6 +2123,18 @@ function SummaryDetailsSection({ summary }: { summary: any }) {
         <div key={key} className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30">
           <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
           <div className="text-white font-bold text-xl">{displayValue}</div>
+        </div>
+      );
+    }
+
+    if (key === 'entry_price') {
+      const displayValue = typeof value === 'number'
+        ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : value;
+      return (
+        <div key={key} className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30">
+          <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
+          <div className="text-accent-yellow font-bold text-xl">${displayValue}</div>
         </div>
       );
     }

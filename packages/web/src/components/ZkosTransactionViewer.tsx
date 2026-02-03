@@ -1066,7 +1066,96 @@ function getCommitment(commitment: any): string | null {
 function ScriptInputItem({ input, index }: { input: any; index: number }) {
   const coin = input.input?.Coin;
   const state = input.input?.State;
+  const memo = input.input?.Memo;
   const inType = safeString(input.in_type) || 'Unknown';
+
+  // Handle Memo input type
+  if (memo) {
+    const ownerStr = safeString(memo.owner);
+    const scriptAddrStr = safeString(memo.script_address);
+    const commitment = getCommitment(memo.commitment);
+    const memoData = memo.data;
+    const witnessIdx = memo.witness ?? input.witness;
+
+    return (
+      <div className="bg-background-secondary rounded-lg p-3 border border-border/50">
+        <div className="flex items-center gap-2 mb-2">
+          <ArrowDownLeft className="w-4 h-4 text-accent-blue" />
+          <span className="text-white text-sm font-medium">Input #{index + 1}</span>
+          <span className="badge badge-info text-xs">{inType}</span>
+          {witnessIdx !== undefined && (
+            <span className="text-text-muted text-xs">witness: {witnessIdx}</span>
+          )}
+        </div>
+        <div className="space-y-1 text-sm pl-6">
+          {ownerStr && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Owner:</span>
+              <CopyableText
+                text={ownerStr}
+                displayText={ownerStr}
+                className="font-mono text-primary-light text-xs break-all"
+              />
+            </div>
+          )}
+          {scriptAddrStr && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Script:</span>
+              <CopyableText
+                text={scriptAddrStr}
+                displayText={scriptAddrStr}
+                className="font-mono text-accent-yellow text-xs break-all"
+              />
+            </div>
+          )}
+          {commitment && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Commitment:</span>
+              <CopyableText
+                text={commitment}
+                displayText={commitment}
+                className="font-mono text-text-muted text-xs break-all"
+              />
+            </div>
+          )}
+          {memo.timebounds !== undefined && (
+            <div className="flex items-start gap-2">
+              <span className="text-text-secondary min-w-[100px]">Timebounds:</span>
+              <span className="text-white">{safeString(memo.timebounds)}</span>
+            </div>
+          )}
+          {memoData && Array.isArray(memoData) && memoData.length > 0 && (
+            <div className="mt-2">
+              {/* Check if this is order data */}
+              {memoData.some((item: any) =>
+                item?.position_size !== undefined ||
+                item?.order_side !== undefined ||
+                item?.entry_price !== undefined ||
+                item?.leverage !== undefined
+              ) ? (
+                <OrderDataDisplay items={memoData} />
+              ) : (
+                <div className="flex items-start gap-2">
+                  <span className="text-text-secondary min-w-[100px]">Data:</span>
+                  <div className="flex-1 space-y-1">
+                    {memoData.map((item: any, i: number) => {
+                      if (typeof item === 'string') {
+                        return <span key={i} className="text-text-muted text-xs block">{item}</span>;
+                      }
+                      if (item?.commitment) {
+                        return <span key={i} className="text-text-muted text-xs block">{safeString(item.commitment)}</span>;
+                      }
+                      return <span key={i} className="text-text-muted text-xs block">{JSON.stringify(item)}</span>;
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (coin) {
     const txid = getTxid(coin.utxo);

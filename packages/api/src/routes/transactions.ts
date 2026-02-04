@@ -46,6 +46,16 @@ router.get('/', async (req: Request, res: Response) => {
     const filters = txFilterSchema.parse(req.query);
     const skip = (page - 1) * limit;
 
+    // Build cache key from all parameters
+    const filterKey = JSON.stringify(filters);
+    const cacheKey = CACHE_KEYS.TXS_LIST(page, limit, filterKey);
+
+    // Try cache first
+    const cached = await getCache<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const where: any = {};
 
     if (filters.type) {
@@ -148,7 +158,7 @@ router.get('/', async (req: Request, res: Response) => {
       programType: programTypeMap.get(tx.hash) || null,
     }));
 
-    res.json({
+    const result = {
       data: serializedTxs,
       pagination: {
         page,
@@ -156,7 +166,12 @@ router.get('/', async (req: Request, res: Response) => {
         total,
         totalPages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    // Cache the result
+    setCache(cacheKey, result, CACHE_TTL.TXS_LIST).catch(() => {});
+
+    res.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid query parameters', details: error.errors });
@@ -224,6 +239,14 @@ async function fetchTransactionFromLcd(hash: string): Promise<any | null> {
 // NOTE: This route MUST be before /:hash to avoid "types" being matched as a hash
 router.get('/types/stats', async (req: Request, res: Response) => {
   try {
+    const cacheKey = 'cache:txs:types:stats';
+
+    // Try cache first
+    const cached = await getCache<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const stats = await prisma.transaction.groupBy({
       by: ['type'],
       _count: { type: true },
@@ -231,12 +254,15 @@ router.get('/types/stats', async (req: Request, res: Response) => {
       take: 20,
     });
 
-    res.json(
-      stats.map((s) => ({
-        type: s.type,
-        count: s._count.type,
-      }))
-    );
+    const result = stats.map((s) => ({
+      type: s.type,
+      count: s._count.type,
+    }));
+
+    // Cache for 30 seconds
+    setCache(cacheKey, result, CACHE_TTL.STATS).catch(() => {});
+
+    res.json(result);
   } catch (error) {
     console.error('Error fetching transaction stats:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -254,6 +280,13 @@ router.get('/script/:scriptAddress', async (req: Request, res: Response) => {
 
     if (!scriptAddress || scriptAddress.length < 10) {
       return res.status(400).json({ error: 'Invalid script address' });
+    }
+
+    // Try cache first
+    const cacheKey = `cache:script:${scriptAddress}:${page}:${limit}`;
+    const cached = await getCache<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
     // Search for script_address in decodedData JSON
@@ -300,7 +333,7 @@ router.get('/script/:scriptAddress', async (req: Request, res: Response) => {
       programType: programTypeMap.get(tx.hash) || null,
     }));
 
-    res.json({
+    const result = {
       data: serializedTxs,
       scriptAddress,
       pagination: {
@@ -309,7 +342,12 @@ router.get('/script/:scriptAddress', async (req: Request, res: Response) => {
         total,
         totalPages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    // Cache the result
+    setCache(cacheKey, result, CACHE_TTL.TXS_LIST).catch(() => {});
+
+    res.json(result);
   } catch (error) {
     console.error('Error searching transactions by script:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -325,12 +363,17 @@ router.get('/:hash', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid transaction hash' });
     }
 
-    // Try both uppercase and lowercase hash lookups
+    // Single query - try both uppercase and lowercase at once
     const upperHash = hash.toUpperCase();
     const lowerHash = hash.toLowerCase();
 
-    let transaction = await prisma.transaction.findUnique({
-      where: { hash: upperHash },
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        OR: [
+          { hash: upperHash },
+          { hash: lowerHash },
+        ],
+      },
       include: {
         block: {
           select: {
@@ -347,28 +390,6 @@ router.get('/:hash', async (req: Request, res: Response) => {
         },
       },
     });
-
-    // Try lowercase if uppercase not found
-    if (!transaction) {
-      transaction = await prisma.transaction.findUnique({
-        where: { hash: lowerHash },
-        include: {
-          block: {
-            select: {
-              height: true,
-              hash: true,
-              timestamp: true,
-            },
-          },
-          events: {
-            select: {
-              type: true,
-              attributes: true,
-            },
-          },
-        },
-      });
-    }
 
     // If not in database, fetch from LCD API
     if (!transaction) {

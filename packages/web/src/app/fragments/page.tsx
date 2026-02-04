@@ -2,17 +2,42 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Puzzle, Users, CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Puzzle, Users, CheckCircle, XCircle, ChevronDown, ChevronUp, Bitcoin, Copy, Check } from 'lucide-react';
 import { LoadingTable } from '@/components/Loading';
-import { getFragmentsLive, FragmentLive } from '@/lib/api';
-import { useState } from 'react';
+import { getFragmentsLive, getSweepAddresses, FragmentLive, SweepAddress } from '@/lib/api';
+import { useState, useMemo } from 'react';
 
 function formatSatoshis(satoshis: string): string {
   const btc = parseInt(satoshis) / 100000000;
   return btc.toFixed(8) + ' BTC';
 }
 
-function FragmentRow({ fragment }: { fragment: FragmentLive }) {
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="p-1 hover:bg-background-tertiary rounded transition-colors"
+      title="Copy to clipboard"
+    >
+      {copied ? (
+        <Check className="w-3 h-3 text-accent-green" />
+      ) : (
+        <Copy className="w-3 h-3 text-text-muted hover:text-white" />
+      )}
+    </button>
+  );
+}
+
+function FragmentRow({ fragment, sweepAddress }: { fragment: FragmentLive; sweepAddress?: SweepAddress }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -59,53 +84,114 @@ function FragmentRow({ fragment }: { fragment: FragmentLive }) {
           </span>
         </td>
         <td className="text-text-secondary">{fragment.feeBips} bips</td>
+        <td>
+          {sweepAddress ? (
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary-light">
+              Round #{sweepAddress.roundId}
+            </span>
+          ) : (
+            <span className="text-text-muted text-xs">-</span>
+          )}
+        </td>
       </tr>
-      {expanded && fragment.signers.length > 0 && (
+      {expanded && (
         <tr>
-          <td colSpan={7} className="bg-background-tertiary p-4">
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-white mb-3">Signers ({fragment.signers.length})</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-text-secondary text-left">
-                      <th className="pb-2 font-medium">Address</th>
-                      <th className="pb-2 font-medium">Status</th>
-                      <th className="pb-2 font-medium">Fee</th>
-                      <th className="pb-2 font-medium">BTC Public Key</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fragment.signers.map((signer, idx) => (
-                      <tr key={idx} className="border-t border-border">
-                        <td className="py-2">
-                          <Link
-                            href={`/accounts/${signer.signerAddress}`}
-                            className="font-mono text-xs text-primary-light hover:text-primary"
-                          >
-                            {signer.signerAddress.substring(0, 24)}...
-                          </Link>
-                        </td>
-                        <td className="py-2">
-                          {signer.status ? (
-                            <span className="text-accent-green text-xs">Active</span>
-                          ) : (
-                            <span className="text-accent-red text-xs">Inactive</span>
-                          )}
-                        </td>
-                        <td className="py-2 text-text-secondary text-xs">
-                          {formatSatoshis(signer.applicationFee)}
-                        </td>
-                        <td className="py-2">
-                          <span className="font-mono text-xs text-text-secondary">
-                            {signer.btcPubKey.substring(0, 30)}...
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          <td colSpan={8} className="bg-background-tertiary p-4">
+            <div className="space-y-4">
+              {/* BTC Reserve Info */}
+              {sweepAddress && (
+                <div className="bg-background-secondary rounded-lg p-4 border border-border/50">
+                  <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                    <Bitcoin className="w-4 h-4 text-accent-yellow" />
+                    Latest BTC Reserve (Round #{sweepAddress.roundId})
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-text-muted text-xs uppercase block mb-1">BTC Address</span>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`https://mempool.space/address/${sweepAddress.btcAddress}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-sm text-accent-yellow hover:underline break-all"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {sweepAddress.btcAddress}
+                        </a>
+                        <CopyButton text={sweepAddress.btcAddress} />
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-text-muted text-xs uppercase block mb-1">Script</span>
+                      <div className="flex items-start gap-2">
+                        <code className="font-mono text-xs text-text-secondary break-all bg-background-primary/50 p-2 rounded flex-1">
+                          {sweepAddress.btcScript}
+                        </code>
+                        <CopyButton text={sweepAddress.btcScript} />
+                      </div>
+                    </div>
+                    <div className="flex gap-4 text-sm">
+                      <div>
+                        <span className="text-text-muted">Reserve ID: </span>
+                        <span className="text-white">{sweepAddress.reserveId}</span>
+                      </div>
+                      <div>
+                        <span className="text-text-muted">Round ID: </span>
+                        <span className="text-white">{sweepAddress.roundId}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Signers */}
+              {fragment.signers.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-white mb-3">Signers ({fragment.signers.length})</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-text-secondary text-left">
+                          <th className="pb-2 font-medium">Address</th>
+                          <th className="pb-2 font-medium">Status</th>
+                          <th className="pb-2 font-medium">Fee</th>
+                          <th className="pb-2 font-medium">BTC Public Key</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fragment.signers.map((signer, idx) => (
+                          <tr key={idx} className="border-t border-border">
+                            <td className="py-2">
+                              <Link
+                                href={`/accounts/${signer.signerAddress}`}
+                                className="font-mono text-xs text-primary-light hover:text-primary"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {signer.signerAddress.substring(0, 24)}...
+                              </Link>
+                            </td>
+                            <td className="py-2">
+                              {signer.status ? (
+                                <span className="text-accent-green text-xs">Active</span>
+                              ) : (
+                                <span className="text-accent-red text-xs">Inactive</span>
+                              )}
+                            </td>
+                            <td className="py-2 text-text-secondary text-xs">
+                              {formatSatoshis(signer.applicationFee)}
+                            </td>
+                            <td className="py-2">
+                              <span className="font-mono text-xs text-text-secondary">
+                                {signer.btcPubKey.substring(0, 30)}...
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           </td>
         </tr>
@@ -119,6 +205,25 @@ export default function FragmentsPage() {
     queryKey: ['fragments-live'],
     queryFn: getFragmentsLive,
   });
+
+  const { data: sweepData } = useQuery({
+    queryKey: ['sweep-addresses'],
+    queryFn: () => getSweepAddresses(100),
+  });
+
+  // Create a map of judgeAddress to their latest sweep address (highest roundId)
+  const latestSweepByJudge = useMemo(() => {
+    if (!sweepData?.proposeSweepAddressMsgs) return new Map<string, SweepAddress>();
+
+    const map = new Map<string, SweepAddress>();
+    for (const sweep of sweepData.proposeSweepAddressMsgs) {
+      const existing = map.get(sweep.judgeAddress);
+      if (!existing || parseInt(sweep.roundId) > parseInt(existing.roundId)) {
+        map.set(sweep.judgeAddress, sweep);
+      }
+    }
+    return map;
+  }, [sweepData]);
 
   return (
     <div className="space-y-6">
@@ -154,11 +259,16 @@ export default function FragmentsPage() {
                   <th>Signers</th>
                   <th>Fee Pool</th>
                   <th>Fee Rate</th>
+                  <th>Latest Round</th>
                 </tr>
               </thead>
               <tbody>
                 {data?.data.map((fragment) => (
-                  <FragmentRow key={fragment.id} fragment={fragment} />
+                  <FragmentRow
+                    key={fragment.id}
+                    fragment={fragment}
+                    sweepAddress={latestSweepByJudge.get(fragment.judgeAddress)}
+                  />
                 ))}
               </tbody>
             </table>

@@ -243,3 +243,26 @@ export const getZkosTransfers = (page = 1, limit = 20) =>
 
 export const search = (query: string) =>
   fetchApi<any>(`/api/twilight/search?q=${encodeURIComponent(query)}`);
+
+// Sweep Addresses from LCD
+export interface SweepAddress {
+  btcAddress: string;
+  btcScript: string;
+  reserveId: string;
+  roundId: string;
+  judgeAddress: string;
+}
+
+export interface SweepAddressesResponse {
+  proposeSweepAddressMsgs: SweepAddress[];
+}
+
+const LCD_URL = 'https://lcd.twilight.org';
+
+export const getSweepAddresses = async (limit = 50): Promise<SweepAddressesResponse> => {
+  const response = await fetch(`${LCD_URL}/twilight-project/nyks/bridge/propose_sweep_addresses_all/${limit}`);
+  if (!response.ok) {
+    throw new Error(`LCD API error: ${response.status}`);
+  }
+  return response.json();
+};

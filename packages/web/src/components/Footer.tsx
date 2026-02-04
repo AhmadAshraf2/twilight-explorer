@@ -6,7 +6,7 @@ export function Footer() {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-text-secondary text-sm">
-            Twilight Explorer - Cosmos Block Explorer for Twilight Chain
+            Twilight Explorer
           </div>
           <div className="flex items-center gap-6">
             <a

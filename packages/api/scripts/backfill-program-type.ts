@@ -29,37 +29,13 @@ async function main() {
   console.log(`Need to process: ${total - withProgramType}\n`);
 
   // Update using raw SQL for efficiency
-  // Check both paths: decoded_data->'data'->'summary'->>'order_operation'
-  // and decoded_data->'summary'->>'order_operation'
+  // Use program_type from summary for Script transactions, or tx_type for Transfer/Message
   const result = await prisma.$executeRaw`
     UPDATE "ZkosTransfer"
-    SET "programType" = CASE
-      WHEN COALESCE(
-        "decodedData"->'data'->'summary'->>'order_operation',
-        "decodedData"->'summary'->>'order_operation'
-      ) = 'order_open' THEN 'CreateTraderOrder'
-      WHEN COALESCE(
-        "decodedData"->'data'->'summary'->>'order_operation',
-        "decodedData"->'summary'->>'order_operation'
-      ) IN ('order_close', 'order_settle') THEN 'SettleTraderOrder'
-      WHEN COALESCE(
-        "decodedData"->'data'->'summary'->>'order_operation',
-        "decodedData"->'summary'->>'order_operation'
-      ) = 'lend_open' THEN 'CreateLendOrder'
-      WHEN COALESCE(
-        "decodedData"->'data'->'summary'->>'order_operation',
-        "decodedData"->'summary'->>'order_operation'
-      ) IN ('lend_close', 'lend_settle') THEN 'SettleLendOrder'
-      WHEN COALESCE(
-        "decodedData"->'data'->'summary'->>'order_operation',
-        "decodedData"->'summary'->>'order_operation'
-      ) = 'liquidate' THEN 'LiquidateOrder'
-      WHEN COALESCE(
-        "decodedData"->'data'->'summary'->>'order_operation',
-        "decodedData"->'summary'->>'order_operation'
-      ) IN ('relayer_init', 'relayer_initialize') THEN 'RelayerInitializer'
-      ELSE NULL
-    END
+    SET "programType" = COALESCE(
+      "decodedData"->'summary'->>'program_type',
+      "decodedData"->>'tx_type'
+    )
     WHERE "programType" IS NULL
   `;
 

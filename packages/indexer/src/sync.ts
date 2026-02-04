@@ -509,23 +509,11 @@ async function processCustomMessages(
         const decodedZkos = await decodeZkosTransactionFromApi(data.txByteCode as string);
 
         // Determine program type from decoded data
-        let programType: string | null = null;
-        const orderOp = (decodedZkos as any)?.data?.summary?.order_operation
-          || (decodedZkos as any)?.summary?.order_operation;
-        if (orderOp) {
-          const ORDER_OP_MAP: Record<string, string> = {
-            'order_open': 'CreateTraderOrder',
-            'order_close': 'SettleTraderOrder',
-            'order_settle': 'SettleTraderOrder',
-            'lend_open': 'CreateLendOrder',
-            'lend_close': 'SettleLendOrder',
-            'lend_settle': 'SettleLendOrder',
-            'liquidate': 'LiquidateOrder',
-            'relayer_init': 'RelayerInitializer',
-            'relayer_initialize': 'RelayerInitializer',
-          };
-          programType = ORDER_OP_MAP[orderOp] || null;
-        }
+        // For Script transactions: use summary.program_type (e.g., CreateTraderOrder, SettleTraderOrder)
+        // For Transfer/Message transactions: use tx_type directly
+        const programType = (decodedZkos as any)?.summary?.program_type
+          || (decodedZkos as any)?.tx_type
+          || null;
 
         await db.zkosTransfer.create({
           data: {

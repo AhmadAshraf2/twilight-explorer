@@ -20,6 +20,8 @@ const moduleFilters = [
 
 const programTypeFilters = [
   { value: '', label: 'All Program Types' },
+  { value: 'Transfer', label: 'Transfer' },
+  { value: 'Message', label: 'Message' },
   { value: 'RelayerInitializer', label: 'Relayer Initializer' },
   { value: 'CreateTraderOrder', label: 'Create Trader Order' },
   { value: 'SettleTraderOrder', label: 'Settle Trader Order' },

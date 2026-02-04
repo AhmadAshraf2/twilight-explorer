@@ -36,7 +36,7 @@ const txFilterSchema = z.object({
   type: z.string().optional(),
   status: z.enum(['success', 'failed']).optional(),
   module: z.enum(['bridge', 'forks', 'volt', 'zkos']).optional(),
-  programType: z.enum(['RelayerInitializer', 'CreateTraderOrder', 'SettleTraderOrder', 'CreateLendOrder', 'SettleLendOrder', 'LiquidateOrder']).optional(),
+  programType: z.enum(['Transfer', 'Message', 'RelayerInitializer', 'CreateTraderOrder', 'SettleTraderOrder', 'CreateLendOrder', 'SettleLendOrder', 'LiquidateOrder']).optional(),
 });
 
 // GET /api/txs - List transactions with pagination and filters

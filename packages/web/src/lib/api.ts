@@ -175,11 +175,12 @@ export const getLatestBlock = () => fetchApi<Block>('/api/blocks/latest');
 export const getBlock = (height: number) => fetchApi<Block>(`/api/blocks/${height}`);
 
 // Transactions
-export const getTransactions = (page = 1, limit = 20, filters?: { type?: string; status?: string; module?: string }) => {
+export const getTransactions = (page = 1, limit = 20, filters?: { type?: string; status?: string; module?: string; programType?: string }) => {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (filters?.type) params.set('type', filters.type);
   if (filters?.status) params.set('status', filters.status);
   if (filters?.module) params.set('module', filters.module);
+  if (filters?.programType) params.set('programType', filters.programType);
   return fetchApi<PaginatedResponse<Transaction>>(`/api/txs?${params}`);
 };
 

@@ -18,6 +18,16 @@ const moduleFilters = [
   { value: 'zkos', label: 'zkOS' },
 ];
 
+const programTypeFilters = [
+  { value: '', label: 'All Program Types' },
+  { value: 'RelayerInitializer', label: 'Relayer Initializer' },
+  { value: 'CreateTraderOrder', label: 'Create Trader Order' },
+  { value: 'SettleTraderOrder', label: 'Settle Trader Order' },
+  { value: 'CreateLendOrder', label: 'Create Lend Order' },
+  { value: 'SettleLendOrder', label: 'Settle Lend Order' },
+  { value: 'LiquidateOrder', label: 'Liquidate Order' },
+];
+
 const statusFilters = [
   { value: '', label: 'All Status' },
   { value: 'success', label: 'Success' },
@@ -27,14 +37,16 @@ const statusFilters = [
 export default function TransactionsPage() {
   const [page, setPage] = useState(1);
   const [moduleFilter, setModuleFilter] = useState('');
+  const [programTypeFilter, setProgramTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const limit = 20;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['transactions', page, limit, moduleFilter, statusFilter],
+    queryKey: ['transactions', page, limit, moduleFilter, programTypeFilter, statusFilter],
     queryFn: () =>
       getTransactions(page, limit, {
         module: moduleFilter || undefined,
+        programType: moduleFilter === 'zkos' && programTypeFilter ? programTypeFilter : undefined,
         status: statusFilter as 'success' | 'failed' | undefined,
       }),
   });
@@ -50,12 +62,13 @@ export default function TransactionsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Filter className="w-4 h-4 text-text-secondary" />
           <select
             value={moduleFilter}
             onChange={(e) => {
               setModuleFilter(e.target.value);
+              setProgramTypeFilter(''); // Reset program type when module changes
               setPage(1);
             }}
             className="bg-background-tertiary border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
@@ -66,6 +79,22 @@ export default function TransactionsPage() {
               </option>
             ))}
           </select>
+          {moduleFilter === 'zkos' && (
+            <select
+              value={programTypeFilter}
+              onChange={(e) => {
+                setProgramTypeFilter(e.target.value);
+                setPage(1);
+              }}
+              className="bg-background-tertiary border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+            >
+              {programTypeFilters.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             value={statusFilter}
             onChange={(e) => {

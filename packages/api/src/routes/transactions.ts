@@ -36,7 +36,27 @@ const txFilterSchema = z.object({
   type: z.string().optional(),
   status: z.enum(['success', 'failed']).optional(),
   module: z.enum(['bridge', 'forks', 'volt', 'zkos']).optional(),
+  programType: z.enum(['RelayerInitializer', 'CreateTraderOrder', 'SettleTraderOrder', 'CreateLendOrder', 'SettleLendOrder', 'LiquidateOrder']).optional(),
 });
+
+// Known relayer programs - must match frontend ZkosTransactionViewer.tsx
+const RELAYER_PROGRAMS: Record<string, string> = {
+  '060a0402000000060a0e0401000000060a0402000000060a0e1013': 'RelayerInitializer',
+  '060a0403000000060a0405000000060a0d0e13020202': 'CreateTraderOrder',
+  '040300000002040300000002040a0000000603000000000a0b04070000000603000000000a04020000000c04020000000a0b04020000000a0c0404000000060a0b0c0302000000050d0307000000050d0407000000050403000000050b0c0406000000050d0407000000050d0403000000050c0e04010000000b0403000000060a0c0402000000060a0e101302': 'SettleTraderOrder',
+  '0401000000060a0302000000060a0306000000060a0c0e0403000000060a0304000000060a0307000000060a0c0e100401000000050402000000060a0405000000060a0d0c0402000000060a0403000000060a0d0e1013': 'CreateLendOrder',
+  '050304000000060a0307000000060a0d0c0302000000060a0306000000060a0d0e0406000000060a0b0403000000060a0c0402000000060a0e100401000000060a0402000000060a0403000000060a0b0c0e101302': 'SettleLendOrder',
+  '0202020202060a0401000000060a0407000000060a0c0e130202020202': 'LiquidateOrder',
+};
+
+// Helper to match program opcodes to program name
+function matchProgramType(decodedData: any): string | null {
+  if (!decodedData?.summary?.program_opcodes || !Array.isArray(decodedData.summary.program_opcodes)) {
+    return null;
+  }
+  const programHex = decodedData.summary.program_opcodes.join('').toLowerCase();
+  return RELAYER_PROGRAMS[programHex] || null;
+}
 
 // GET /api/txs - List transactions with pagination and filters
 router.get('/', async (req: Request, res: Response) => {
@@ -57,6 +77,29 @@ router.get('/', async (req: Request, res: Response) => {
 
     if (filters.module) {
       where.type = { contains: `.${filters.module}.` };
+    }
+
+    // Handle programType filter for zkOS transactions
+    if (filters.programType && filters.module === 'zkos') {
+      // Get all zkosTransfer records and filter by program type
+      const zkosTransfers = await prisma.zkosTransfer.findMany({
+        select: { txHash: true, decodedData: true },
+      });
+
+      // Filter by matching program type
+      const matchingHashes = zkosTransfers
+        .filter((zt) => matchProgramType(zt.decodedData) === filters.programType)
+        .map((zt) => zt.txHash);
+
+      if (matchingHashes.length === 0) {
+        // No matches, return empty result
+        return res.json({
+          data: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+        });
+      }
+
+      where.hash = { in: matchingHashes };
     }
 
     const [transactions, total] = await Promise.all([

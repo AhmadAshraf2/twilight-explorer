@@ -89,7 +89,7 @@ export async function decodeZkosTransactionFromApi(
 ): Promise<DecodedZkosTransaction | null> {
   try {
     const response = await axios.post(
-      `${config.zkosDecodeUrl}/api/decode-transaction`,
+      `${config.zkosDecodeUrl}/api/decode-zkos-transaction`,
       { tx_byte_code: txByteCode },
       {
         timeout: 10000,

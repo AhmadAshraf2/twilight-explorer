@@ -508,6 +508,25 @@ async function processCustomMessages(
         // Decode the zkOS transaction using external API
         const decodedZkos = await decodeZkosTransactionFromApi(data.txByteCode as string);
 
+        // Determine program type from decoded data
+        let programType: string | null = null;
+        const orderOp = (decodedZkos as any)?.data?.summary?.order_operation
+          || (decodedZkos as any)?.summary?.order_operation;
+        if (orderOp) {
+          const ORDER_OP_MAP: Record<string, string> = {
+            'order_open': 'CreateTraderOrder',
+            'order_close': 'SettleTraderOrder',
+            'order_settle': 'SettleTraderOrder',
+            'lend_open': 'CreateLendOrder',
+            'lend_close': 'SettleLendOrder',
+            'lend_settle': 'SettleLendOrder',
+            'liquidate': 'LiquidateOrder',
+            'relayer_init': 'RelayerInitializer',
+            'relayer_initialize': 'RelayerInitializer',
+          };
+          programType = ORDER_OP_MAP[orderOp] || null;
+        }
+
         await db.zkosTransfer.create({
           data: {
             txHash: txData.hash,
@@ -519,6 +538,7 @@ async function processCustomMessages(
             decodedData: decodedZkos as any,
             inputs: decodedZkos?.inputs as any,
             outputs: decodedZkos?.outputs as any,
+            programType,
           },
         });
       }

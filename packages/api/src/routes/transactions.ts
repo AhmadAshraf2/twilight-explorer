@@ -39,30 +39,6 @@ const txFilterSchema = z.object({
   programType: z.enum(['RelayerInitializer', 'CreateTraderOrder', 'SettleTraderOrder', 'CreateLendOrder', 'SettleLendOrder', 'LiquidateOrder']).optional(),
 });
 
-// Map order_operation values to program type names
-const ORDER_OPERATION_TO_PROGRAM: Record<string, string> = {
-  'order_open': 'CreateTraderOrder',
-  'order_close': 'SettleTraderOrder',
-  'order_settle': 'SettleTraderOrder',
-  'lend_open': 'CreateLendOrder',
-  'lend_close': 'SettleLendOrder',
-  'lend_settle': 'SettleLendOrder',
-  'liquidate': 'LiquidateOrder',
-  'relayer_init': 'RelayerInitializer',
-  'relayer_initialize': 'RelayerInitializer',
-};
-
-// Helper to match program type from decoded data
-function matchProgramType(decodedData: any): string | null {
-  // Check both possible paths for order_operation (structure varies)
-  const orderOp = decodedData?.data?.summary?.order_operation
-    || decodedData?.summary?.order_operation;
-  if (orderOp && ORDER_OPERATION_TO_PROGRAM[orderOp]) {
-    return ORDER_OPERATION_TO_PROGRAM[orderOp];
-  }
-  return null;
-}
-
 // GET /api/txs - List transactions with pagination and filters
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -86,15 +62,13 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Handle programType filter for zkOS transactions
     if (filters.programType && filters.module === 'zkos') {
-      // Get all zkosTransfer records and filter by program type
+      // Query zkosTransfer table using the programType column directly
       const zkosTransfers = await prisma.zkosTransfer.findMany({
-        select: { txHash: true, decodedData: true },
+        where: { programType: filters.programType },
+        select: { txHash: true },
       });
 
-      // Filter by matching program type
-      const matchingHashes = zkosTransfers
-        .filter((zt) => matchProgramType(zt.decodedData) === filters.programType)
-        .map((zt) => zt.txHash);
+      const matchingHashes = zkosTransfers.map((zt) => zt.txHash);
 
       if (matchingHashes.length === 0) {
         // No matches, return empty result

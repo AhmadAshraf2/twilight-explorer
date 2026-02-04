@@ -306,10 +306,12 @@ model ZkosTransfer {
   decodedData           Json?     // Decoded transaction data from zkOS API
   inputs                Json?     // Parsed inputs
   outputs               Json?     // Parsed outputs
+  programType           String?   // e.g., "CreateTraderOrder", "SettleTraderOrder", null for Transfer
   createdAt             DateTime  @default(now())
 
   @@index([blockHeight])
   @@index([zkOracleAddress])
+  @@index([programType])
 }
 
 model ZkosMintBurn {

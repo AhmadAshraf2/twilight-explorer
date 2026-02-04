@@ -126,6 +126,7 @@ export default function TransactionsPage() {
                   <th>Hash</th>
                   <th>Block</th>
                   <th>Type</th>
+                  <th>zkOS Type</th>
                   <th>Status</th>
                   <th>Time</th>
                 </tr>
@@ -153,6 +154,15 @@ export default function TransactionsPage() {
                       <span className="badge badge-primary">
                         {tx.type.split('.').pop()?.replace('Msg', '')}
                       </span>
+                    </td>
+                    <td>
+                      {tx.programType ? (
+                        <span className="badge bg-purple-500/20 text-purple-400">
+                          {tx.programType}
+                        </span>
+                      ) : (
+                        <span className="text-text-secondary">-</span>
+                      )}
                     </td>
                     <td>
                       <span

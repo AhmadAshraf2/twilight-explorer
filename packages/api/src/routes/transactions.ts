@@ -101,9 +101,20 @@ router.get('/', async (req: Request, res: Response) => {
       prisma.transaction.count({ where }),
     ]);
 
+    // Get programType for zkOS transactions
+    const txHashes = transactions.map((tx) => tx.hash);
+    const zkosTransfers = await prisma.zkosTransfer.findMany({
+      where: { txHash: { in: txHashes } },
+      select: { txHash: true, programType: true },
+    });
+    const programTypeMap = new Map(
+      zkosTransfers.map((zt) => [zt.txHash, zt.programType])
+    );
+
     const serializedTxs = transactions.map((tx) => ({
       ...tx,
       gasUsed: tx.gasUsed.toString(),
+      programType: programTypeMap.get(tx.hash) || null,
     }));
 
     res.json({

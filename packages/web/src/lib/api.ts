@@ -37,6 +37,7 @@ export interface Transaction {
   errorLog?: string | null;
   signers?: string[];
   zkosDecodedData?: any;
+  programType?: string | null;
 }
 
 export interface Stats {

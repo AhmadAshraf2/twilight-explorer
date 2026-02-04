@@ -289,11 +289,12 @@ router.get('/script/:scriptAddress', async (req: Request, res: Response) => {
       return res.json(cached);
     }
 
-    // Search for script_address in decodedData JSON
+    // Search for script_address in decodedData JSON (handle both with and without space after colon)
     const zkosTransfers = await prisma.$queryRaw<Array<{ txHash: string; blockHeight: number; programType: string | null }>>`
       SELECT "txHash", "blockHeight", "programType"
       FROM "ZkosTransfer"
-      WHERE "decodedData"::text LIKE '%"script_address":"' || ${scriptAddress} || '"%'
+      WHERE "decodedData"::text LIKE '%"script_address": "' || ${scriptAddress} || '"%'
+         OR "decodedData"::text LIKE '%"script_address":"' || ${scriptAddress} || '"%'
       ORDER BY "blockHeight" DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
@@ -301,7 +302,8 @@ router.get('/script/:scriptAddress', async (req: Request, res: Response) => {
     // Get total count
     const countResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
       SELECT COUNT(*) as count FROM "ZkosTransfer"
-      WHERE "decodedData"::text LIKE '%"script_address":"' || ${scriptAddress} || '"%'
+      WHERE "decodedData"::text LIKE '%"script_address": "' || ${scriptAddress} || '"%'
+         OR "decodedData"::text LIKE '%"script_address":"' || ${scriptAddress} || '"%'
     `;
     const total = Number(countResult[0]?.count || 0);
 

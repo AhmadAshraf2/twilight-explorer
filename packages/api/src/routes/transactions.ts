@@ -36,7 +36,7 @@ const txFilterSchema = z.object({
   type: z.string().optional(),
   status: z.enum(['success', 'failed']).optional(),
   module: z.enum(['bridge', 'forks', 'volt', 'zkos']).optional(),
-  programType: z.enum(['Transfer', 'Message', 'RelayerInitializer', 'CreateTraderOrder', 'SettleTraderOrder', 'SettleTraderOrderNegativeMarginDifference', 'CreateLendOrder', 'SettleLendOrder', 'LiquidateOrder']).optional(),
+  programType: z.enum(['Transfer', 'Message', 'Mint', 'Burn', 'RelayerInitializer', 'CreateTraderOrder', 'SettleTraderOrder', 'SettleTraderOrderNegativeMarginDifference', 'CreateLendOrder', 'SettleLendOrder', 'LiquidateOrder']).optional(),
 });
 
 // GET /api/txs - List transactions with pagination and filters
@@ -62,13 +62,23 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Handle programType filter for zkOS transactions
     if (filters.programType && filters.module === 'zkos') {
-      // Query zkosTransfer table using the programType column directly
-      const zkosTransfers = await prisma.zkosTransfer.findMany({
-        where: { programType: filters.programType },
-        select: { txHash: true },
-      });
+      let matchingHashes: string[] = [];
 
-      const matchingHashes = zkosTransfers.map((zt) => zt.txHash);
+      // Handle Mint/Burn filters from ZkosMintBurn table
+      if (filters.programType === 'Mint' || filters.programType === 'Burn') {
+        const mintBurns = await prisma.zkosMintBurn.findMany({
+          where: { mintOrBurn: filters.programType === 'Mint' },
+          select: { txHash: true },
+        });
+        matchingHashes = mintBurns.map((mb) => mb.txHash);
+      } else {
+        // Query zkosTransfer table using the programType column
+        const zkosTransfers = await prisma.zkosTransfer.findMany({
+          where: { programType: filters.programType },
+          select: { txHash: true },
+        });
+        matchingHashes = zkosTransfers.map((zt) => zt.txHash);
+      }
 
       if (matchingHashes.length === 0) {
         // No matches, return empty result
@@ -103,20 +113,34 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Get programType for zkOS transactions
     const txHashes = transactions.map((tx) => tx.hash);
-    const zkosTransfers = await prisma.zkosTransfer.findMany({
-      where: { txHash: { in: txHashes } },
-      select: { txHash: true, programType: true, decodedData: true },
-    });
-    const programTypeMap = new Map(
-      zkosTransfers.map((zt) => {
-        // Use programType column if available, otherwise extract from decodedData
-        const programType = zt.programType
-          || (zt.decodedData as any)?.summary?.program_type
-          || (zt.decodedData as any)?.tx_type
-          || null;
-        return [zt.txHash, programType];
-      })
-    );
+
+    // Query both ZkosTransfer and ZkosMintBurn tables
+    const [zkosTransfers, zkosMintBurns] = await Promise.all([
+      prisma.zkosTransfer.findMany({
+        where: { txHash: { in: txHashes } },
+        select: { txHash: true, programType: true, decodedData: true },
+      }),
+      prisma.zkosMintBurn.findMany({
+        where: { txHash: { in: txHashes } },
+        select: { txHash: true, mintOrBurn: true },
+      }),
+    ]);
+
+    const programTypeMap = new Map<string, string | null>();
+
+    // Add ZkosTransfer programTypes
+    for (const zt of zkosTransfers) {
+      const programType = zt.programType
+        || (zt.decodedData as any)?.summary?.program_type
+        || (zt.decodedData as any)?.tx_type
+        || null;
+      programTypeMap.set(zt.txHash, programType);
+    }
+
+    // Add ZkosMintBurn types (Mint/Burn)
+    for (const mb of zkosMintBurns) {
+      programTypeMap.set(mb.txHash, mb.mintOrBurn ? 'Mint' : 'Burn');
+    }
 
     const serializedTxs = transactions.map((tx) => ({
       ...tx,

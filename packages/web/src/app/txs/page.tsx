@@ -22,6 +22,8 @@ const programTypeFilters = [
   { value: '', label: 'All ZKOS Types' },
   { value: 'Transfer', label: 'Transfer' },
   { value: 'Message', label: 'Message' },
+  { value: 'Mint', label: 'Mint' },
+  { value: 'Burn', label: 'Burn' },
   { value: 'RelayerInitializer', label: 'Relayer Initializer' },
   { value: 'CreateTraderOrder', label: 'Create Trader Order' },
   { value: 'SettleTraderOrder', label: 'Settle Trader Order' },

@@ -39,23 +39,28 @@ const txFilterSchema = z.object({
   programType: z.enum(['RelayerInitializer', 'CreateTraderOrder', 'SettleTraderOrder', 'CreateLendOrder', 'SettleLendOrder', 'LiquidateOrder']).optional(),
 });
 
-// Known relayer programs - must match frontend ZkosTransactionViewer.tsx
-const RELAYER_PROGRAMS: Record<string, string> = {
-  '060a0402000000060a0e0401000000060a0402000000060a0e1013': 'RelayerInitializer',
-  '060a0403000000060a0405000000060a0d0e13020202': 'CreateTraderOrder',
-  '040300000002040300000002040a0000000603000000000a0b04070000000603000000000a04020000000c04020000000a0b04020000000a0c0404000000060a0b0c0302000000050d0307000000050d0407000000050403000000050b0c0406000000050d0407000000050d0403000000050c0e04010000000b0403000000060a0c0402000000060a0e101302': 'SettleTraderOrder',
-  '0401000000060a0302000000060a0306000000060a0c0e0403000000060a0304000000060a0307000000060a0c0e100401000000050402000000060a0405000000060a0d0c0402000000060a0403000000060a0d0e1013': 'CreateLendOrder',
-  '050304000000060a0307000000060a0d0c0302000000060a0306000000060a0d0e0406000000060a0b0403000000060a0c0402000000060a0e100401000000060a0402000000060a0403000000060a0b0c0e101302': 'SettleLendOrder',
-  '0202020202060a0401000000060a0407000000060a0c0e130202020202': 'LiquidateOrder',
+// Map order_operation values to program type names
+const ORDER_OPERATION_TO_PROGRAM: Record<string, string> = {
+  'order_open': 'CreateTraderOrder',
+  'order_close': 'SettleTraderOrder',
+  'order_settle': 'SettleTraderOrder',
+  'lend_open': 'CreateLendOrder',
+  'lend_close': 'SettleLendOrder',
+  'lend_settle': 'SettleLendOrder',
+  'liquidate': 'LiquidateOrder',
+  'relayer_init': 'RelayerInitializer',
+  'relayer_initialize': 'RelayerInitializer',
 };
 
-// Helper to match program opcodes to program name
+// Helper to match program type from decoded data
 function matchProgramType(decodedData: any): string | null {
-  if (!decodedData?.summary?.program_opcodes || !Array.isArray(decodedData.summary.program_opcodes)) {
-    return null;
+  // Check both possible paths for order_operation (structure varies)
+  const orderOp = decodedData?.data?.summary?.order_operation
+    || decodedData?.summary?.order_operation;
+  if (orderOp && ORDER_OPERATION_TO_PROGRAM[orderOp]) {
+    return ORDER_OPERATION_TO_PROGRAM[orderOp];
   }
-  const programHex = decodedData.summary.program_opcodes.join('').toLowerCase();
-  return RELAYER_PROGRAMS[programHex] || null;
+  return null;
 }
 
 // GET /api/txs - List transactions with pagination and filters

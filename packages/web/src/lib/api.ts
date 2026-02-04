@@ -246,6 +246,12 @@ export const getZkosTransfers = (page = 1, limit = 20) =>
 export const search = (query: string) =>
   fetchApi<any>(`/api/twilight/search?q=${encodeURIComponent(query)}`);
 
+// Script address transactions
+export const getTransactionsByScript = (scriptAddress: string, page = 1, limit = 20) =>
+  fetchApi<PaginatedResponse<Transaction> & { scriptAddress: string }>(
+    `/api/txs/script/${scriptAddress}?page=${page}&limit=${limit}`
+  );
+
 // Sweep Addresses from LCD
 export interface SweepAddress {
   btcAddress: string;

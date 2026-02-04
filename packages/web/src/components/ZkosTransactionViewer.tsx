@@ -842,11 +842,12 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
           {scriptAddrStr && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Script:</span>
-              <CopyableText
-                text={scriptAddrStr}
-                displayText={scriptAddrStr}
-                className="font-mono text-accent-yellow text-xs break-all"
-              />
+              <Link
+                href={`/scripts/${scriptAddrStr}`}
+                className="font-mono text-accent-yellow text-xs break-all hover:underline"
+              >
+                {scriptAddrStr}
+              </Link>
             </div>
           )}
           {commitment && (
@@ -925,11 +926,12 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
           {scriptAddrStr && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Script:</span>
-              <CopyableText
-                text={scriptAddrStr}
-                displayText={scriptAddrStr}
-                className="font-mono text-accent-yellow text-xs break-all"
-              />
+              <Link
+                href={`/scripts/${scriptAddrStr}`}
+                className="font-mono text-accent-yellow text-xs break-all hover:underline"
+              >
+                {scriptAddrStr}
+              </Link>
             </div>
           )}
           {commitment && (
@@ -1136,11 +1138,12 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
           {scriptAddrStr && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Script:</span>
-              <CopyableText
-                text={scriptAddrStr}
-                displayText={scriptAddrStr}
-                className="font-mono text-accent-yellow text-xs break-all"
-              />
+              <Link
+                href={`/scripts/${scriptAddrStr}`}
+                className="font-mono text-accent-yellow text-xs break-all hover:underline"
+              >
+                {scriptAddrStr}
+              </Link>
             </div>
           )}
           {commitment && (
@@ -1327,11 +1330,12 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
           {scriptAddrStr && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Script:</span>
-              <CopyableText
-                text={scriptAddrStr}
-                displayText={scriptAddrStr}
-                className="font-mono text-accent-yellow text-xs break-all"
-              />
+              <Link
+                href={`/scripts/${scriptAddrStr}`}
+                className="font-mono text-accent-yellow text-xs break-all hover:underline"
+              >
+                {scriptAddrStr}
+              </Link>
             </div>
           )}
           {commitment && (

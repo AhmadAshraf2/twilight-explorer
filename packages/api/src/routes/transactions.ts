@@ -243,6 +243,79 @@ router.get('/types/stats', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/txs/script/:scriptAddress - Get transactions by script address
+// NOTE: This route MUST be before /:hash to avoid "script" being matched as a hash
+router.get('/script/:scriptAddress', async (req: Request, res: Response) => {
+  try {
+    const { scriptAddress } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const offset = (page - 1) * limit;
+
+    if (!scriptAddress || scriptAddress.length < 10) {
+      return res.status(400).json({ error: 'Invalid script address' });
+    }
+
+    // Search for script_address in decodedData JSON
+    const zkosTransfers = await prisma.$queryRaw<Array<{ txHash: string; blockHeight: number; programType: string | null }>>`
+      SELECT "txHash", "blockHeight", "programType"
+      FROM "ZkosTransfer"
+      WHERE "decodedData"::text LIKE '%"script_address":"' || ${scriptAddress} || '"%'
+      ORDER BY "blockHeight" DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    // Get total count
+    const countResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(*) as count FROM "ZkosTransfer"
+      WHERE "decodedData"::text LIKE '%"script_address":"' || ${scriptAddress} || '"%'
+    `;
+    const total = Number(countResult[0]?.count || 0);
+
+    // Get full transaction data for the matching hashes
+    const txHashes = zkosTransfers.map((zt) => zt.txHash);
+    const transactions = txHashes.length > 0
+      ? await prisma.transaction.findMany({
+          where: { hash: { in: txHashes } },
+          select: {
+            hash: true,
+            blockHeight: true,
+            blockTime: true,
+            type: true,
+            status: true,
+            gasUsed: true,
+          },
+          orderBy: { blockHeight: 'desc' },
+        })
+      : [];
+
+    // Build programType map
+    const programTypeMap = new Map(
+      zkosTransfers.map((zt) => [zt.txHash, zt.programType])
+    );
+
+    const serializedTxs = transactions.map((tx) => ({
+      ...tx,
+      gasUsed: tx.gasUsed.toString(),
+      programType: programTypeMap.get(tx.hash) || null,
+    }));
+
+    res.json({
+      data: serializedTxs,
+      scriptAddress,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error searching transactions by script:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/txs/:hash - Get transaction by hash
 router.get('/:hash', async (req: Request, res: Response) => {
   try {

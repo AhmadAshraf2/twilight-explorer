@@ -105,10 +105,17 @@ router.get('/', async (req: Request, res: Response) => {
     const txHashes = transactions.map((tx) => tx.hash);
     const zkosTransfers = await prisma.zkosTransfer.findMany({
       where: { txHash: { in: txHashes } },
-      select: { txHash: true, programType: true },
+      select: { txHash: true, programType: true, decodedData: true },
     });
     const programTypeMap = new Map(
-      zkosTransfers.map((zt) => [zt.txHash, zt.programType])
+      zkosTransfers.map((zt) => {
+        // Use programType column if available, otherwise extract from decodedData
+        const programType = zt.programType
+          || (zt.decodedData as any)?.summary?.program_type
+          || (zt.decodedData as any)?.tx_type
+          || null;
+        return [zt.txHash, programType];
+      })
     );
 
     const serializedTxs = transactions.map((tx) => ({

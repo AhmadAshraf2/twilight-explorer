@@ -126,7 +126,7 @@ export default function TransactionsPage() {
                   <th>Hash</th>
                   <th>Block</th>
                   <th>Type</th>
-                  <th>zkOS Type</th>
+                  <th>ZKOS Type</th>
                   <th>Status</th>
                   <th>Time</th>
                 </tr>

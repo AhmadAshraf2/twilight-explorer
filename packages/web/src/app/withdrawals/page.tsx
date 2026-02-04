@@ -79,9 +79,14 @@ export default function WithdrawalsPage() {
                       </Link>
                     </td>
                     <td>
-                      <span className="font-mono text-sm text-text-secondary">
+                      <a
+                        href={`https://mempool.space/address/${withdrawal.withdrawAddress}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-sm text-primary-light hover:text-primary"
+                      >
                         {withdrawal.withdrawAddress.substring(0, 16)}...
-                      </span>
+                      </a>
                     </td>
                     <td>
                       <span

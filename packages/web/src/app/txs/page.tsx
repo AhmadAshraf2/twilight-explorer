@@ -19,7 +19,7 @@ const moduleFilters = [
 ];
 
 const programTypeFilters = [
-  { value: '', label: 'All Program Types' },
+  { value: '', label: 'All ZKOS Types' },
   { value: 'Transfer', label: 'Transfer' },
   { value: 'Message', label: 'Message' },
   { value: 'RelayerInitializer', label: 'Relayer Initializer' },

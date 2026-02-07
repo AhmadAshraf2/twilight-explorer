@@ -17,7 +17,7 @@ export default function ScriptPage() {
   const [page, setPage] = useState(1);
   const limit = 20;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['script-transactions', scriptAddress, page, limit],
     queryFn: () => getTransactionsByScript(scriptAddress, page, limit),
     enabled: !!scriptAddress,
@@ -45,7 +45,13 @@ export default function ScriptPage() {
 
       {isLoading ? (
         <LoadingTable rows={10} />
-      ) : data?.data.length === 0 ? (
+      ) : isError || !data ? (
+        <div className="card p-8 text-center">
+          <p className="text-text-secondary">
+            Failed to load transactions. Please try again.
+          </p>
+        </div>
+      ) : data.data.length === 0 ? (
         <div className="card p-8 text-center">
           <p className="text-text-secondary">
             No transactions found for this script address.

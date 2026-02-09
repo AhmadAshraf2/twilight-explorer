@@ -243,42 +243,44 @@ export default function FragmentsPage() {
         <LoadingTable rows={10} />
       ) : (
         <>
-          <div className="card p-4 mb-4">
-            <span className="text-text-secondary">Total Fragments: </span>
-            <span className="text-white font-medium">{data?.total || 0}</span>
-          </div>
-
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Status</th>
-                  <th>Judge Address</th>
-                  <th>Threshold</th>
-                  <th>Signers</th>
-                  <th>Fee Pool</th>
-                  <th>Fee Rate</th>
-                  <th>Latest Round</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data?.data.map((fragment) => (
-                  <FragmentRow
-                    key={fragment.id}
-                    fragment={fragment}
-                    sweepAddress={latestSweepByJudge.get(fragment.judgeAddress)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {(!data?.data || data.data.length === 0) && (
-            <div className="text-center py-12 text-text-secondary">
-              No fragments found
+          <div className="card">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <h2 className="text-white font-medium text-[15.8px] leading-[24px]">All Fragments</h2>
+              <div className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-muted">
+                Total: <span className="text-text-secondary font-mono">{(data?.total ?? 0).toLocaleString?.() ?? data?.total ?? 0}</span>
+              </div>
             </div>
-          )}
+
+            {data?.data && data.data.length > 0 ? (
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Status</th>
+                      <th>Judge Address</th>
+                      <th>Threshold</th>
+                      <th>Signers</th>
+                      <th>Fee Pool</th>
+                      <th>Fee Rate</th>
+                      <th>Latest Round</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.data.map((fragment) => (
+                      <FragmentRow
+                        key={fragment.id}
+                        fragment={fragment}
+                        sweepAddress={latestSweepByJudge.get(fragment.judgeAddress)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-text-secondary">No fragments found</div>
+            )}
+          </div>
         </>
       )}
     </div>

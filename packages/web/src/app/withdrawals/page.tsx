@@ -45,10 +45,23 @@ export default function WithdrawalsPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <LoadingTable rows={10} />
-      ) : (
-        <>
+      <div className="card">
+        <div className="flex items-start justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h2 className="text-white font-medium text-[15.8px] leading-[24px]">All Withdrawals</h2>
+            <p className="text-text-secondary text-sm">
+              {isLoading
+                ? 'Loading…'
+                : data
+                  ? `Showing ${data.data.length} of ${data.pagination.total.toLocaleString()}`
+                  : '—'}
+            </p>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <LoadingTable rows={10} />
+        ) : data?.data?.length ? (
           <div className="table-container">
             <table>
               <thead>
@@ -62,7 +75,7 @@ export default function WithdrawalsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data?.data.map((withdrawal) => (
+                {data.data.map((withdrawal) => (
                   <tr key={withdrawal.id}>
                     <td className="font-medium">#{withdrawal.id}</td>
                     <td>
@@ -71,10 +84,7 @@ export default function WithdrawalsPage() {
                       </span>
                     </td>
                     <td>
-                      <Link
-                        href={`/accounts/${withdrawal.twilightAddress}`}
-                        className="font-mono text-sm text-primary-light hover:text-primary"
-                      >
+                      <Link href={`/accounts/${withdrawal.twilightAddress}`} className="font-mono text-sm">
                         {withdrawal.twilightAddress.substring(0, 20)}...
                       </Link>
                     </td>
@@ -83,17 +93,14 @@ export default function WithdrawalsPage() {
                         href={`https://mempool.space/address/${withdrawal.withdrawAddress}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-sm text-primary-light hover:text-primary"
+                        className="font-mono text-sm"
                       >
                         {withdrawal.withdrawAddress.substring(0, 16)}...
                       </a>
                     </td>
                     <td>
                       <span
-                        className={clsx(
-                          'badge',
-                          statusColors[withdrawal.status] || 'badge-info'
-                        )}
+                        className={clsx('badge', statusColors[withdrawal.status] || 'badge-info')}
                       >
                         {withdrawal.status}
                       </span>
@@ -101,9 +108,7 @@ export default function WithdrawalsPage() {
                     <td>
                       <div className="flex items-center gap-1 text-text-secondary text-sm">
                         <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(withdrawal.createdAt), {
-                          addSuffix: true,
-                        })}
+                        {formatDistanceToNow(new Date(withdrawal.createdAt), { addSuffix: true })}
                       </div>
                     </td>
                   </tr>
@@ -111,16 +116,20 @@ export default function WithdrawalsPage() {
               </tbody>
             </table>
           </div>
+        ) : (
+          <div className="text-center text-text-secondary py-10">No withdrawals found</div>
+        )}
 
-          {data && data.pagination.totalPages > 1 && (
+        {data && data.pagination.totalPages > 1 && (
+          <div className="mt-4">
             <Pagination
               currentPage={page}
               totalPages={data.pagination.totalPages}
               onPageChange={setPage}
             />
-          )}
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

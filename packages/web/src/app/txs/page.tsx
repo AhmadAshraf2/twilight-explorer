@@ -58,69 +58,87 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/20 rounded-[7px] border border-card-border/50">
-            <ArrowRightLeft className="w-6 h-6 text-primary-light" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Transactions</h1>
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-primary/20 rounded-[7px] border border-card-border/50">
+          <ArrowRightLeft className="w-6 h-6 text-primary-light" />
         </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Transactions</h1>
+          <p className="text-text-secondary text-sm">
+            Browse and filter recent network activity
+          </p>
+        </div>
+      </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <Filter className="w-4 h-4 text-text-secondary" />
-          <select
-            value={moduleFilter}
-            onChange={(e) => {
-              setModuleFilter(e.target.value);
-              setProgramTypeFilter(''); // Reset program type when module changes
-              setPage(1);
-            }}
-            className="bg-background-tertiary/60 border border-card-border rounded-[10.5px] px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
-          >
-            {moduleFilters.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-          {moduleFilter === 'zkos' && (
+      {/* Module: Table + Controls */}
+      <div className="card">
+        <div className="flex items-start justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h2 className="text-white font-medium text-[15.8px] leading-[24px]">All Transactions</h2>
+            <p className="text-text-secondary text-sm">
+              {isLoading
+                ? 'Loading…'
+                : data
+                  ? `Showing ${data.data.length} of ${data.pagination.total.toLocaleString()}`
+                  : '—'}
+            </p>
+          </div>
+
+          {/* Filters */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <Filter className="w-4 h-4 text-text-secondary" />
             <select
-              value={programTypeFilter}
+              value={moduleFilter}
               onChange={(e) => {
-                setProgramTypeFilter(e.target.value);
+                setModuleFilter(e.target.value);
+                setProgramTypeFilter(''); // Reset program type when module changes
                 setPage(1);
               }}
               className="bg-background-tertiary/60 border border-card-border rounded-[10.5px] px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
             >
-              {programTypeFilters.map((f) => (
+              {moduleFilters.map((f) => (
                 <option key={f.value} value={f.value}>
                   {f.label}
                 </option>
               ))}
             </select>
-          )}
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="bg-background-tertiary/60 border border-card-border rounded-[10.5px] px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
-          >
-            {statusFilters.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
+            {moduleFilter === 'zkos' && (
+              <select
+                value={programTypeFilter}
+                onChange={(e) => {
+                  setProgramTypeFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-background-tertiary/60 border border-card-border rounded-[10.5px] px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+              >
+                {programTypeFilters.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            )}
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              className="bg-background-tertiary/60 border border-card-border rounded-[10.5px] px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+            >
+              {statusFilters.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
 
-      {isLoading ? (
-        <LoadingTable rows={10} />
-      ) : (
-        <>
+        {isLoading ? (
+          <LoadingTable rows={10} />
+        ) : data?.data?.length ? (
           <div className="table-container">
             <table>
               <thead>
@@ -134,21 +152,15 @@ export default function TransactionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data?.data.map((tx) => (
+                {data.data.map((tx) => (
                   <tr key={tx.hash}>
                     <td>
-                      <Link
-                        href={`/txs/${tx.hash}`}
-                        className="font-mono text-sm text-primary-light hover:text-primary"
-                      >
+                      <Link href={`/txs/${tx.hash}`} className="font-mono text-sm">
                         {tx.hash.substring(0, 16)}...
                       </Link>
                     </td>
                     <td>
-                      <Link
-                        href={`/blocks/${tx.blockHeight}`}
-                        className="text-text-secondary hover:text-primary-light"
-                      >
+                      <Link href={`/blocks/${tx.blockHeight}`} className="text-text-secondary hover:text-primary-light">
                         #{tx.blockHeight.toLocaleString()}
                       </Link>
                     </td>
@@ -159,9 +171,7 @@ export default function TransactionsPage() {
                     </td>
                     <td>
                       {tx.programType ? (
-                        <span className="badge bg-primary/20 text-primary-light">
-                          {tx.programType}
-                        </span>
+                        <span className="badge bg-primary/20 text-primary-light">{tx.programType}</span>
                       ) : (
                         <span className="text-text-secondary">-</span>
                       )}
@@ -184,9 +194,7 @@ export default function TransactionsPage() {
                     <td>
                       <div className="flex items-center gap-1 text-text-secondary text-sm">
                         <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(tx.blockTime), {
-                          addSuffix: true,
-                        })}
+                        {formatDistanceToNow(new Date(tx.blockTime), { addSuffix: true })}
                       </div>
                     </td>
                   </tr>
@@ -194,16 +202,22 @@ export default function TransactionsPage() {
               </tbody>
             </table>
           </div>
+        ) : (
+          <div className="text-center text-text-secondary py-10">
+            No transactions found for the selected filters
+          </div>
+        )}
 
-          {data && data.pagination.totalPages > 1 && (
+        {data && data.pagination.totalPages > 1 && (
+          <div className="mt-4">
             <Pagination
               currentPage={page}
               totalPages={data.pagination.totalPages}
               onPageChange={setPage}
             />
-          )}
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

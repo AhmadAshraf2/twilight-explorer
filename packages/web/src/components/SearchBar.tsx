@@ -56,7 +56,7 @@ export function SearchBar({
           className={clsx(
             'w-full border text-white placeholder-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary',
             size === 'lg'
-              ? 'bg-background-tertiary/60 border-card-border rounded-xl pl-12 pr-5 py-4 text-base'
+              ? 'bg-background-tertiary/80 border-primary/25 rounded-xl pl-12 pr-5 py-4 text-base shadow-card'
               : 'bg-background-tertiary border-border rounded-lg pl-10 pr-4 py-2 text-sm'
           )}
         />

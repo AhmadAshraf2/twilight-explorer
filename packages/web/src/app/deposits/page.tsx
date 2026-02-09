@@ -37,10 +37,23 @@ export default function DepositsPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <LoadingTable rows={10} />
-      ) : (
-        <>
+      <div className="card">
+        <div className="flex items-start justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h2 className="text-white font-medium text-[15.8px] leading-[24px]">All Deposits</h2>
+            <p className="text-text-secondary text-sm">
+              {isLoading
+                ? 'Loading…'
+                : data
+                  ? `Showing ${data.data.length} of ${data.pagination.total.toLocaleString()}`
+                  : '—'}
+            </p>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <LoadingTable rows={10} />
+        ) : data?.data?.length ? (
           <div className="table-container">
             <table>
               <thead>
@@ -54,7 +67,7 @@ export default function DepositsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data?.data.map((deposit) => (
+                {data.data.map((deposit) => (
                   <tr key={deposit.id}>
                     <td className="font-medium">#{deposit.id}</td>
                     <td>
@@ -63,10 +76,7 @@ export default function DepositsPage() {
                       </span>
                     </td>
                     <td>
-                      <Link
-                        href={`/accounts/${deposit.twilightDepositAddress}`}
-                        className="font-mono text-sm text-primary-light hover:text-primary"
-                      >
+                      <Link href={`/accounts/${deposit.twilightDepositAddress}`} className="font-mono text-sm">
                         {deposit.twilightDepositAddress.substring(0, 20)}...
                       </Link>
                     </td>
@@ -84,9 +94,7 @@ export default function DepositsPage() {
                     <td>
                       <div className="flex items-center gap-1 text-text-secondary text-sm">
                         <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(deposit.createdAt), {
-                          addSuffix: true,
-                        })}
+                        {formatDistanceToNow(new Date(deposit.createdAt), { addSuffix: true })}
                       </div>
                     </td>
                   </tr>
@@ -94,16 +102,20 @@ export default function DepositsPage() {
               </tbody>
             </table>
           </div>
+        ) : (
+          <div className="text-center text-text-secondary py-10">No deposits found</div>
+        )}
 
-          {data && data.pagination.totalPages > 1 && (
+        {data && data.pagination.totalPages > 1 && (
+          <div className="mt-4">
             <Pagination
               currentPage={page}
               totalPages={data.pagination.totalPages}
               onPageChange={setPage}
             />
-          )}
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

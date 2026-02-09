@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SearchBar } from '@/components/SearchBar';
@@ -21,7 +21,7 @@ function classifyQuery(q: string): string | null {
   return null;
 }
 
-export default function SearchPage() {
+function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const q = searchParams.get('q') ?? '';
@@ -84,3 +84,10 @@ export default function SearchPage() {
   );
 }
 
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="text-text-secondary">Loading...</div>}>
+      <SearchContent />
+    </Suspense>
+  );
+}

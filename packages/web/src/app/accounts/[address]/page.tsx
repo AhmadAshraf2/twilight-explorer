@@ -259,7 +259,7 @@ export default function AccountDetailPage() {
 
             {(txData?.pagination?.totalPages ?? 0) > 1 && (
               <div className="mt-4 text-center text-text-secondary text-sm">
-                Showing {txData.data.length} of {txData.pagination.total} transactions
+                Showing {txData?.data.length} of {txData?.pagination.total} transactions
               </div>
             )}
           </div>

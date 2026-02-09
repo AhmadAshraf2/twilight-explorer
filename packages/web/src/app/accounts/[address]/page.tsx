@@ -257,7 +257,7 @@ export default function AccountDetailPage() {
               <div className="text-center text-text-secondary py-10">No transactions found for this address</div>
             )}
 
-            {txData?.pagination?.totalPages > 1 && (
+            {(txData?.pagination?.totalPages ?? 0) > 1 && (
               <div className="mt-4 text-center text-text-secondary text-sm">
                 Showing {txData.data.length} of {txData.pagination.total} transactions
               </div>

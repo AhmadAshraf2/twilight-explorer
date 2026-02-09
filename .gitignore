@@ -41,3 +41,5 @@ prisma/*.db-journal
 
 # Misc
 *.tsbuildinfo
+
+report-*.toml

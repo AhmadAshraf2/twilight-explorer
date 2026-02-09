@@ -34,7 +34,7 @@ export default function WithdrawalsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-accent-orange/20 rounded-lg">
+        <div className="p-2 bg-accent-orange/20 rounded-[7px] border border-card-border/50">
           <ArrowUpFromLine className="w-6 h-6 text-accent-orange" />
         </div>
         <div>

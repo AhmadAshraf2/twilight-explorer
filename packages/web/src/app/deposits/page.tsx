@@ -26,7 +26,7 @@ export default function DepositsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-accent-green/20 rounded-lg">
+        <div className="p-2 bg-accent-green/20 rounded-[7px] border border-card-border/50">
           <ArrowDownToLine className="w-6 h-6 text-accent-green" />
         </div>
         <div>

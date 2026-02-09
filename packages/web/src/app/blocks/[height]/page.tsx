@@ -47,7 +47,7 @@ export default function BlockDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/20 rounded-lg">
+          <div className="p-2 bg-primary/20 rounded-[7px] border border-card-border/50">
             <Blocks className="w-6 h-6 text-primary-light" />
           </div>
           <h1 className="text-2xl font-bold text-white">
@@ -58,7 +58,7 @@ export default function BlockDetailPage() {
           <Link
             href={`/blocks/${height - 1}`}
             className={clsx(
-              'p-2 rounded-lg bg-background-tertiary text-text-secondary hover:text-white',
+              'p-2 rounded-[7px] bg-background-tertiary/60 border border-card-border/50 text-text-secondary hover:text-white transition-colors',
               height <= 1 && 'opacity-50 pointer-events-none'
             )}
           >
@@ -66,7 +66,7 @@ export default function BlockDetailPage() {
           </Link>
           <Link
             href={`/blocks/${height + 1}`}
-            className="p-2 rounded-lg bg-background-tertiary text-text-secondary hover:text-white"
+            className="p-2 rounded-[7px] bg-background-tertiary/60 border border-card-border/50 text-text-secondary hover:text-white transition-colors"
           >
             <ChevronRight className="w-5 h-5" />
           </Link>
@@ -78,32 +78,32 @@ export default function BlockDetailPage() {
         <h2 className="card-header">Block Details</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-text-secondary text-sm">Height</p>
+            <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Height</p>
             <p className="text-white font-medium">{height.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-text-secondary text-sm">Timestamp</p>
+            <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Timestamp</p>
             <p className="text-white font-medium">
               {format(new Date(block.timestamp), 'PPpp')}
             </p>
           </div>
           <div>
-            <p className="text-text-secondary text-sm">Transactions</p>
+            <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Transactions</p>
             <p className="text-white font-medium">{block.txCount}</p>
           </div>
           <div>
-            <p className="text-text-secondary text-sm">Gas Used</p>
+            <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Gas Used</p>
             <p className="text-white font-medium">
               {parseInt(block.gasUsed).toLocaleString()}
             </p>
           </div>
           <div className="md:col-span-2">
-            <p className="text-text-secondary text-sm">Block Hash</p>
+            <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Block Hash</p>
             <p className="text-white font-mono text-sm break-all">{block.hash}</p>
           </div>
           {block.proposer && (
             <div className="md:col-span-2">
-              <p className="text-text-secondary text-sm">Proposer</p>
+              <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Proposer</p>
               <p className="text-white font-mono text-sm">{block.proposer}</p>
             </div>
           )}

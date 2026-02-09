@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Menu, X, Search, Blocks, ArrowRightLeft, Wallet, BarChart3, Puzzle } from 'lucide-react';
-import { SearchBar } from './SearchBar';
+import { Menu, X, Blocks, ArrowRightLeft, Wallet, BarChart3, Puzzle } from 'lucide-react';
 import clsx from 'clsx';
 
 const navigation = [
@@ -21,17 +20,15 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="bg-background-secondary border-b border-border sticky top-0 z-50">
-      <nav className="container mx-auto px-4">
+    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-white/5">
+      <nav className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-white font-bold text-lg">T</span>
-              </div>
-              <span className="text-xl font-bold text-white hidden sm:block">
-                Twilight Explorer
+              <img src="/logo.svg" alt="Twilight" className="h-6 w-auto" />
+              <span className="text-xl font-bold text-white hidden sm:block font-display">
+                Explorer
               </span>
             </Link>
 
@@ -58,11 +55,6 @@ export function Header() {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="hidden md:block flex-1 max-w-md mx-8">
-            <SearchBar />
-          </div>
-
           {/* Mobile menu button */}
           <button
             className="md:hidden p-2 text-text-secondary hover:text-white"
@@ -75,9 +67,6 @@ export function Header() {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
-            <div className="mb-4">
-              <SearchBar />
-            </div>
             <div className="space-y-1">
               {navigation.map((item) => {
                 const isActive = pathname === item.href;

@@ -28,12 +28,12 @@ export default function ScriptPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/txs"
-          className="p-2 bg-background-tertiary hover:bg-background-secondary rounded-lg transition-colors"
+          className="p-2 bg-background-tertiary/60 hover:bg-background-tertiary/30 rounded-[7px] border border-card-border/50 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-text-secondary" />
         </Link>
-        <div className="p-2 bg-purple-500/20 rounded-lg">
-          <Code className="w-6 h-6 text-purple-400" />
+        <div className="p-2 bg-primary/20 rounded-[7px] border border-card-border/50">
+          <Code className="w-6 h-6 text-primary-light" />
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold text-white">Script Transactions</h1>
@@ -98,7 +98,7 @@ export default function ScriptPage() {
                     </td>
                     <td>
                       {tx.programType ? (
-                        <span className="badge bg-purple-500/20 text-purple-400">
+                        <span className="badge bg-primary/20 text-primary-light">
                           {tx.programType}
                         </span>
                       ) : (

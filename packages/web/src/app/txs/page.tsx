@@ -60,7 +60,7 @@ export default function TransactionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/20 rounded-lg">
+          <div className="p-2 bg-primary/20 rounded-[7px] border border-card-border/50">
             <ArrowRightLeft className="w-6 h-6 text-primary-light" />
           </div>
           <h1 className="text-2xl font-bold text-white">Transactions</h1>
@@ -76,7 +76,7 @@ export default function TransactionsPage() {
               setProgramTypeFilter(''); // Reset program type when module changes
               setPage(1);
             }}
-            className="bg-background-tertiary border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+            className="bg-background-tertiary/60 border border-card-border rounded-[10.5px] px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
           >
             {moduleFilters.map((f) => (
               <option key={f.value} value={f.value}>
@@ -91,7 +91,7 @@ export default function TransactionsPage() {
                 setProgramTypeFilter(e.target.value);
                 setPage(1);
               }}
-              className="bg-background-tertiary border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+              className="bg-background-tertiary/60 border border-card-border rounded-[10.5px] px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
             >
               {programTypeFilters.map((f) => (
                 <option key={f.value} value={f.value}>
@@ -106,7 +106,7 @@ export default function TransactionsPage() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-background-tertiary border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
+            className="bg-background-tertiary/60 border border-card-border rounded-[10.5px] px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
           >
             {statusFilters.map((f) => (
               <option key={f.value} value={f.value}>
@@ -159,7 +159,7 @@ export default function TransactionsPage() {
                     </td>
                     <td>
                       {tx.programType ? (
-                        <span className="badge bg-purple-500/20 text-purple-400">
+                        <span className="badge bg-primary/20 text-primary-light">
                           {tx.programType}
                         </span>
                       ) : (

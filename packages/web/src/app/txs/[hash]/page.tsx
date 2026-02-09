@@ -55,7 +55,7 @@ export default function TransactionDetailPage() {
       <div className="flex items-center gap-3">
         <div
           className={clsx(
-            'p-2 rounded-lg',
+            'p-2 rounded-[7px] border border-card-border/50',
             tx.status === 'success' ? 'bg-accent-green/20' : 'bg-accent-red/20'
           )}
         >
@@ -76,7 +76,7 @@ export default function TransactionDetailPage() {
         <h2 className="card-header">Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-text-secondary text-sm">Status</p>
+            <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Status</p>
             <span
               className={clsx(
                 'badge mt-1',
@@ -92,7 +92,7 @@ export default function TransactionDetailPage() {
             </span>
           </div>
           <div>
-            <p className="text-text-secondary text-sm">Block</p>
+            <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Block</p>
             <Link
               href={`/blocks/${tx.blockHeight}`}
               className="text-primary-light hover:text-primary font-medium flex items-center gap-1 mt-1"
@@ -102,14 +102,14 @@ export default function TransactionDetailPage() {
             </Link>
           </div>
           <div>
-            <p className="text-text-secondary text-sm">Timestamp</p>
+            <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Timestamp</p>
             <p className="text-white font-medium flex items-center gap-1 mt-1">
               <Clock className="w-4 h-4 text-text-secondary" />
               {format(new Date(tx.blockTime), 'PPpp')}
             </p>
           </div>
           <div>
-            <p className="text-text-secondary text-sm">Gas Used</p>
+            <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Gas Used</p>
             <p className="text-white font-medium flex items-center gap-1 mt-1">
               <Fuel className="w-4 h-4 text-text-secondary" />
               {parseInt(tx.gasUsed).toLocaleString()}
@@ -122,13 +122,13 @@ export default function TransactionDetailPage() {
           </div>
           {tx.memo && (
             <div className="md:col-span-2">
-              <p className="text-text-secondary text-sm">Memo</p>
+              <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Memo</p>
               <p className="text-white mt-1">{tx.memo}</p>
             </div>
           )}
           {tx.errorLog && (
             <div className="md:col-span-2">
-              <p className="text-text-secondary text-sm">Error</p>
+              <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Error</p>
               <p className="text-accent-red mt-1 font-mono text-sm">{tx.errorLog}</p>
             </div>
           )}
@@ -160,14 +160,14 @@ export default function TransactionDetailPage() {
           <h2 className="card-header">Trading Fee</h2>
           <div className="flex flex-wrap gap-4">
             {tx.fee.amount.map((coin: any, i: number) => (
-              <div key={i} className="bg-background-tertiary rounded-lg px-4 py-2">
+              <div key={i} className="bg-background-tertiary/40 rounded-[7px] px-4 py-2 border border-card-border/30">
                 <span className="text-accent-yellow font-semibold">
                   {formatCoinAmount(coin.amount, coin.denom)}
                 </span>
               </div>
             ))}
             {tx.fee.gas_limit && (
-              <div className="bg-background-tertiary rounded-lg px-4 py-2">
+              <div className="bg-background-tertiary/40 rounded-[7px] px-4 py-2 border border-card-border/30">
                 <span className="text-text-secondary">Gas Limit: </span>
                 <span className="text-white">{parseInt(tx.fee.gas_limit).toLocaleString()}</span>
               </div>

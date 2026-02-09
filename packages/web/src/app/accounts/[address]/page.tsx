@@ -89,7 +89,7 @@ export default function AccountDetailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-primary/20 rounded-lg">
+        <div className="p-2 bg-primary/20 rounded-[7px] border border-card-border/50">
           <User className="w-6 h-6 text-primary-light" />
         </div>
         <div>
@@ -111,7 +111,7 @@ export default function AccountDetailPage() {
             {data.balances.map((balance, idx) => (
               <div
                 key={idx}
-                className="bg-background-tertiary rounded-lg px-4 py-3 border border-border/50"
+                className="bg-background-tertiary/40 rounded-[7px] px-4 py-3 border border-card-border/50"
               >
                 <p className="text-text-secondary text-xs uppercase mb-1">
                   {formatDenom(balance.denom)}
@@ -131,11 +131,11 @@ export default function AccountDetailPage() {
           <h2 className="card-header">Activity Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-text-secondary text-sm">Transactions</p>
+              <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Transactions</p>
               <p className="text-white font-medium">{data.account.txCount}</p>
             </div>
             <div>
-              <p className="text-text-secondary text-sm">First Seen</p>
+              <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">First Seen</p>
               <p className="text-white font-medium">
                 {format(new Date(data.account.firstSeen), 'PP')}
               </p>
@@ -154,7 +154,7 @@ export default function AccountDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {data.clearingAccount.btcDepositAddress && (
               <div>
-                <p className="text-text-secondary text-sm">BTC Deposit Address</p>
+                <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">BTC Deposit Address</p>
                 <p className="text-white font-mono text-sm break-all">
                   {data.clearingAccount.btcDepositAddress}
                 </p>
@@ -162,7 +162,7 @@ export default function AccountDetailPage() {
             )}
             {data.clearingAccount.btcWithdrawAddress && (
               <div>
-                <p className="text-text-secondary text-sm">BTC Withdraw Address</p>
+                <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">BTC Withdraw Address</p>
                 <p className="text-white font-mono text-sm break-all">
                   {data.clearingAccount.btcWithdrawAddress}
                 </p>

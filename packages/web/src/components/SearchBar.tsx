@@ -3,8 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
+import clsx from 'clsx';
 
-export function SearchBar() {
+export function SearchBar({
+  size = 'md',
+  className,
+}: {
+  size?: 'md' | 'lg';
+  className?: string;
+}) {
   const [query, setQuery] = useState('');
   const router = useRouter();
 
@@ -33,15 +40,25 @@ export function SearchBar() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative w-full">
+    <form onSubmit={handleSubmit} className={clsx('relative w-full', className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+        <Search
+          className={clsx(
+            'absolute left-3 top-1/2 -translate-y-1/2 text-text-muted',
+            size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'
+          )}
+        />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by block, tx hash, or address..."
-          className="w-full bg-background-tertiary border border-border rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          className={clsx(
+            'w-full border text-white placeholder-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary',
+            size === 'lg'
+              ? 'bg-background-tertiary/60 border-card-border rounded-xl pl-12 pr-5 py-4 text-base'
+              : 'bg-background-tertiary border-border rounded-lg pl-10 pr-4 py-2 text-sm'
+          )}
         />
       </div>
     </form>

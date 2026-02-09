@@ -21,7 +21,7 @@ export default function BlocksPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-primary/20 rounded-lg">
+        <div className="p-2 bg-primary/20 rounded-[7px] border border-card-border/50">
           <Blocks className="w-6 h-6 text-primary-light" />
         </div>
         <h1 className="text-2xl font-bold text-white">Blocks</h1>

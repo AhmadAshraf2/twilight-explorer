@@ -25,7 +25,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="p-1 hover:bg-background-tertiary rounded transition-colors"
+      className="p-1 hover:bg-background-tertiary/30 rounded-[3.5px] transition-colors"
       title="Copy to clipboard"
     >
       {copied ? (
@@ -100,7 +100,7 @@ function FragmentRow({ fragment, sweepAddress }: { fragment: FragmentLive; sweep
             <div className="space-y-4">
               {/* BTC Reserve Info */}
               {sweepAddress && (
-                <div className="bg-background-secondary rounded-lg p-4 border border-border/50">
+                <div className="bg-background-secondary rounded-[10.5px] p-4 border border-card-border/50">
                   <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
                     <Bitcoin className="w-4 h-4 text-accent-yellow" />
                     Latest BTC Reserve (Round #{sweepAddress.roundId})
@@ -124,7 +124,7 @@ function FragmentRow({ fragment, sweepAddress }: { fragment: FragmentLive; sweep
                     <div>
                       <span className="text-text-muted text-xs uppercase block mb-1">Script</span>
                       <div className="flex items-start gap-2">
-                        <code className="font-mono text-xs text-text-secondary break-all bg-background-primary/50 p-2 rounded flex-1">
+                        <code className="font-mono text-xs text-text-secondary break-all bg-background-primary/50 p-2 rounded-[7px] flex-1 border border-card-border/30">
                           {sweepAddress.btcScript}
                         </code>
                         <CopyButton text={sweepAddress.btcScript} />
@@ -228,7 +228,7 @@ export default function FragmentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-primary/20 rounded-lg">
+        <div className="p-2 bg-primary/20 rounded-[7px] border border-card-border/50">
           <Puzzle className="w-6 h-6 text-primary-light" />
         </div>
         <div>

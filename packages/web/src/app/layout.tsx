@@ -13,6 +13,8 @@ const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
   weight: ['400'],
   variable: '--font-serif',
+  adjustFontFallback: false,
+
 });
 const robotoMono = Roboto_Mono({
   subsets: ['latin'],

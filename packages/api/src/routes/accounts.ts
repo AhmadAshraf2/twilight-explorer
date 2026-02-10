@@ -82,7 +82,6 @@ router.get('/:address', async (req: Request, res: Response) => {
 
     const serializedWithdrawals = withdrawals.map((w) => ({
       ...w,
-      reserveId: w.reserveId.toString(),
       withdrawAmount: w.withdrawAmount.toString(),
     }));
 

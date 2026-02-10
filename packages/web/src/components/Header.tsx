@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Globe,
   Menu,
   X,
   Blocks,
@@ -179,16 +178,42 @@ useEffect(() => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-page/80 backdrop-blur-lg border-b border-white/5">
-      <nav className="max-w-7xl mx-auto px-6 lg:px-10">
+    <header 
+      className="sticky top-0 z-50 bg-page/80 backdrop-blur-lg border-b border-white/5 w-full"
+      style={{
+        height: '72px'
+      }}
+    >
+      {/* Left Technical Element - absolute positioned at screen edge (full width) */}
+      <div 
+        className="absolute left-20 hidden sm:block"
+        style={{ 
+          width: '15px', 
+          height: '15px',
+          top: 'calc(50% - 15px/2 - 0.5px)'
+        }}
+      >
+        <img src="/technical_element.svg" alt="" className="w-full h-full" />
+      </div>
+
+      {/* Main nav content - centered, constrained to 1432px, padding matches main content */}
+      <nav className="relative max-w-[1432px] mx-auto px-4 sm:px-6 lg:px-[156px]">
+        {/* Logo - positioned relative to nav container (constrained) */}
+        <div 
+          className="absolute hidden sm:block"
+          style={{ 
+            width: '107.6px',
+            height: '24px',
+            left: '181px',
+            top: 'calc(50% - 24px/2)'
+          }}
+        >
+          <Link href="/" className="block w-full h-full">
+            <img src="/logo.svg" alt="Twilight" className="w-full h-full" />
+          </Link>
+        </div>
+
         <div className="flex items-center h-16 lg:h-[72px]">
-          {/* Left: Globe + Logo */}
-          <div className="flex items-center gap-4">
-            <Globe className="w-5 h-5 text-text-muted hidden sm:block" />
-            <Link href="/" className="flex items-center gap-2">
-              <img src="/logo.svg" alt="Twilight" className="w-auto h-6" />
-            </Link>
-          </div>
 
           {/* Center Navigation (Desktop) */}
           <div className="hidden lg:flex flex-1 justify-end mr-12" ref={dropdownRef}>
@@ -203,31 +228,39 @@ useEffect(() => {
             </div>
           </div>
 
-         {/* Right: Search + Globe + Mobile Menu Toggle */}
-<div className="flex items-center gap-2 ml-auto">
-  {/* Search should be just inside (left of) the right-edge globe */}
-  <button
-    type="button"
-    className="p-2.5 rounded-full border border-card-border/60 bg-black/30 text-white/90 hover:text-white hover:bg-background-tertiary/30 transition-colors duration-150"
-    aria-label={searchOpen ? 'Close search' : 'Open search'}
-    onClick={() => setSearchOpen(true)}
-  >
-    <Search className="w-5 h-5" />
-  </button>
+          {/* Right: Search + Mobile Menu Toggle (globe removed from here) */}
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              type="button"
+              className="p-2.5 rounded-full border border-card-border/60 bg-black/30 text-white/90 hover:text-white hover:bg-background-tertiary/30 transition-colors duration-150"
+              aria-label={searchOpen ? 'Close search' : 'Open search'}
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="w-5 h-5" />
+            </button>
 
-  {/* Globe stays on the right edge */}
-  <Globe className="w-5 h-5 text-text-muted hidden sm:block" />
-
-  <button
-    className="lg:hidden p-2 text-text-secondary hover:text-white"
-    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-    aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-  >
-    {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-  </button>
-</div>
+            <button
+              className="lg:hidden p-2 text-text-secondary hover:text-white"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </nav>
+
+      {/* Right Technical Element - absolute positioned at screen edge */}
+      <div 
+        className="absolute right-20 hidden sm:block"
+        style={{ 
+          width: '15px', 
+          height: '15px',
+          top: 'calc(50% - 15px/2 - 0.5px)'
+        }}
+      >
+        <img src="/technical_element.svg" alt="" className="w-full h-full" />
+      </div>
 
 {/* Search Modal */}
 {searchOpen && (

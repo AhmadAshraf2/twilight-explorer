@@ -1,13 +1,15 @@
 import { ShieldCheck, Zap, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import type { Stats, ModuleStats } from '@/lib/api';
+import type { Stats, ModuleStats, NetworkPerformance } from '@/lib/api';
 
 export function HeroPanel({
   stats,
   moduleStats,
+  networkPerformance,
 }: {
   stats?: Stats;
   moduleStats?: ModuleStats;
+  networkPerformance?: NetworkPerformance;
 }) {
   const latest = stats?.latestBlock;
   const formatUpdated = (ts?: string) => {
@@ -157,6 +159,24 @@ export function HeroPanel({
         </span>
         <span className="font-mono text-white text-[12.3px] leading-[18px]">
           {latest?.height ? `#${latest.height.toLocaleString()}` : '—'}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[10.5px] leading-[14px] uppercase tracking-wider text-white/70">
+          Block time
+        </span>
+        <span className="font-mono text-white text-[12.3px] leading-[18px]">
+          {networkPerformance?.averageBlockTime ? `${networkPerformance.averageBlockTime.toFixed(1)}s avg` : '—'}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[10.5px] leading-[14px] uppercase tracking-wider text-white/70">
+          TPS
+        </span>
+        <span className="font-mono text-white text-[12.3px] leading-[18px]">
+          {networkPerformance?.tps ? networkPerformance.tps.toFixed(2) : '—'}
         </span>
       </div>
 

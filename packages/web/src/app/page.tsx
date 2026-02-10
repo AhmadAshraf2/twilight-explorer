@@ -4,13 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import {
-  Blocks,
   ArrowRightLeft,
   Users,
-  Activity,
   Wallet,
-  ShieldCheck,
-  Zap,
+  Shield,
+  Network,
+  Layers,
   Clock,
   CheckCircle,
   XCircle,
@@ -18,8 +17,33 @@ import {
 import { StatsCard } from '@/components/StatsCard';
 import { LoadingCard, LoadingTable } from '@/components/Loading';
 import { SearchBar } from '@/components/SearchBar';
-import { getStats, getModuleStats, getBlocks, getRecentTransactions, getValidatorCount } from '@/lib/api';
+import {
+  getStats,
+  getModuleStats,
+  getBlocks,
+  getRecentTransactions,
+  getValidatorCount,
+  getNetworkPerformance,
+  getActiveAccounts,
+  getBridgeAnalytics,
+} from '@/lib/api';
 import { HeroPanel } from '@/components/dashboard/HeroPanel';
+
+// Format satoshis to BTC
+function formatBTC(satoshis: string | number): string {
+  const sats = typeof satoshis === 'string' ? BigInt(satoshis) : BigInt(satoshis);
+  const btc = Number(sats) / 100_000_000;
+
+  if (btc >= 1_000_000) {
+    return `${(btc / 1_000_000).toFixed(2)}M`;
+  } else if (btc >= 1_000) {
+    return `${(btc / 1_000).toFixed(2)}K`;
+  } else if (btc >= 1) {
+    return btc.toFixed(2);
+  } else {
+    return btc.toFixed(4);
+  }
+}
 //import { InfoFooter } from '@/components/dashboard/InfoFooter';
 function formatAgeShort(ts: string) {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(ts).getTime()) / 1000));
@@ -49,6 +73,27 @@ export default function Dashboard() {
     refetchInterval: 120_000,
   });
 
+  const { data: networkPerformance, isLoading: networkPerfLoading } = useQuery({
+    queryKey: ['network-performance'],
+    queryFn: getNetworkPerformance,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const { data: activeAccounts, isLoading: activeAccountsLoading } = useQuery({
+    queryKey: ['active-accounts'],
+    queryFn: getActiveAccounts,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+
+  const { data: bridgeAnalytics, isLoading: bridgeAnalyticsLoading } = useQuery({
+    queryKey: ['bridge-analytics'],
+    queryFn: getBridgeAnalytics,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+
   const { data: blocksData, isLoading: blocksLoading } = useQuery({
     queryKey: ['blocks', 1, 8],
     queryFn: () => getBlocks(1, 8),
@@ -66,21 +111,21 @@ export default function Dashboard() {
     <>
       {/*<div className="grain-overlay" />*/}
 
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Hero */}
-        <HeroPanel stats={stats} moduleStats={moduleStats} />
+        <HeroPanel stats={stats} moduleStats={moduleStats} networkPerformance={networkPerformance} />
 
         {/* Primary Search (explorer high point) */}
         <section className="card card-hover rounded-[14px] p-5 sm:p-6 bg-card border border-primary/20 shadow-glow">
           <SearchBar size="lg" />
         </section>
 
-        {/* Stats rows (reference-style rhythm) */}
+        {/* Stats rows (2x3 grid - symmetric layout) */}
         <section className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {statsLoading ? (
+          {/* Row 1: Core Network Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {statsLoading || activeAccountsLoading ? (
               <>
-                <LoadingCard />
                 <LoadingCard />
                 <LoadingCard />
                 <LoadingCard />
@@ -88,56 +133,66 @@ export default function Dashboard() {
             ) : (
               <>
                 <StatsCard
-                  title="Total Blocks"
-                  value={stats?.totalBlocks || 0}
-                  icon={Blocks}
-                  subtitle={stats?.latestBlock ? `Latest: #${stats.latestBlock.height}` : undefined}
-                />
-                <StatsCard
                   title="Total Transactions"
                   value={stats?.totalTransactions || 0}
                   icon={ArrowRightLeft}
-                  change={`${stats?.transactionsLast24h || 0} in last 24h`}
-                  changeType="positive"
+                  badge={`${stats?.transactionsLast24h || 0}: 24h`}
+                  href="/txs"
                 />
-                <StatsCard title="Total Accounts" value={stats?.totalAccounts || 0} icon={Users} />
                 <StatsCard
-                  title="Success Rate"
-                  value={
-                    stats?.transactionsByStatus
-                      ? `${(((stats.transactionsByStatus.success || 0) / (stats.totalTransactions || 1)) * 100).toFixed(1)}%`
-                      : '0%'
-                  }
-                  icon={Activity}
+                  title="Active Accounts"
+                  value={activeAccounts?.active24h || 0}
+                  icon={Users}
+                  badge="24h"
+                />
+                <StatsCard
+                  title="Active Validators"
+                  value={validatorCount || 0}
+                  icon={Network}
+                  badge="Bonded"
+                  href="/validators"
                 />
               </>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-            {moduleStatsLoading || validatorCountLoading ? (
+          {/* Row 2: Volume & Security Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {moduleStatsLoading || bridgeAnalyticsLoading ? (
               <>
-                <LoadingCard />
-                <LoadingCard />
                 <LoadingCard />
                 <LoadingCard />
                 <LoadingCard />
               </>
             ) : (
               <>
-                <StatsCard title="BTC Deposits" value={moduleStats?.bridge.deposits || 0} icon={Wallet} />
                 <StatsCard
-                  title="BTC Withdrawals"
-                  value={moduleStats?.bridge.withdrawals || 0}
+                  title="BTC Transfer Volume"
+                  value={
+                    bridgeAnalytics?.totalVolume
+                      ? `${formatBTC(bridgeAnalytics.totalVolume)} BTC`
+                      : '0 BTC'
+                  }
                   icon={Wallet}
+                  badge="Cumulative"
+                  href="/deposits"
                 />
-                <StatsCard title="Validators" value={validatorCount || 0} icon={Users} subtitle="Bonded (LCD)" />
                 <StatsCard
-                  title="Active Fragments"
-                  value={moduleStats?.volt.activeFragments || 0}
-                  icon={ShieldCheck}
+                  title="Shielded Transfer Volume"
+                  value={
+                    moduleStats?.zkos.volume ? `${formatBTC(moduleStats.zkos.volume)} BTC` : '0 BTC'
+                  }
+                  icon={Shield}
+                  badge="Cumulative"
+                  tooltip="Aggregate BTC transferred through the privacy layer."
                 />
-                <StatsCard title="zkOS Transfers" value={moduleStats?.zkos.transfers || 0} icon={Zap} />
+                <StatsCard
+                  title="Fragments"
+                  value={moduleStats?.volt.activeFragments || 0}
+                  icon={Layers}
+                  badge="Active"
+                  href="/fragments"
+                />
               </>
             )}
           </div>
@@ -145,14 +200,14 @@ export default function Dashboard() {
 
         {/* Secondary row: recent blocks + recent tx cards (kept as explorer equivalent) */}
         <section className="space-y-6">
-          {/* Recent Blocks */}
+        {/* Recent Blocks */}
           <div className="card">
-            <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4">
               <h2 className="text-white font-medium text-[15.8px] leading-[24px]">Recent Blocks</h2>
               <Link href="/blocks" className={"text-[12.5px] leading-[18px] font-medium text-primary-light hover:text-primary transition-colors"}>
-                View All
-              </Link>
-            </div>
+              View All
+            </Link>
+          </div>
 
             {blocksLoading ? (
               <LoadingTable rows={3} />
@@ -199,16 +254,16 @@ export default function Dashboard() {
             ) : (
               <div className="text-center text-text-secondary py-8">No blocks found</div>
             )}
-          </div>
+        </div>
 
-          {/* Recent Transactions */}
+        {/* Recent Transactions */}
           <div className="card">
-            <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4">
               <h2 className="text-white font-medium text-[15.8px] leading-[24px]">Recent Transactions</h2>
               <Link href="/txs" className="text-[12.5px] leading-[18px] font-medium text-primary-light hover:text-primary transition-colors">
-                View All
-              </Link>
-            </div>
+              View All
+            </Link>
+          </div>
 
             {txsLoading ? (
               <LoadingTable rows={3} />

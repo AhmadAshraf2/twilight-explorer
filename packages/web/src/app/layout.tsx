@@ -40,12 +40,26 @@ export default function RootLayout({
       data-theme={theme}
       className={`${inter.variable} ${instrumentSerif.variable} ${robotoMono.variable}`}
     >
-      <body className="bg-background text-text min-h-screen flex flex-col">
-        <Providers>
-          <Header />
-          <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-10">{children}</main>
-          <Footer />
-        </Providers>
+      <body className="bg-background text-text">
+        {/* Page container - flexbox layout */}
+        <div 
+          className="min-h-screen bg-[#050505] flex flex-col"
+        >
+          <Providers>
+            {/* Header spans full width */}
+            <Header />
+            
+            {/* Main content container: fixed 1432px on lg+, full width on smaller screens */}
+            <main 
+              className="flex-1 w-full lg:w-[1432px] lg:mx-auto px-4 sm:px-6 lg:px-[156px] pt-20 lg:pt-[57px] pb-6 lg:pb-12"
+            >
+              {children}
+            </main>
+            
+            {/* Footer spans full width */}
+            <Footer />
+          </Providers>
+        </div>
       </body>
     </html>
   );

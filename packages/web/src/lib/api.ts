@@ -77,6 +77,55 @@ export interface ModuleStats {
   };
 }
 
+export interface NetworkPerformance {
+  averageBlockTime: number;
+  tps: number;
+  blockProductionRate: number;
+  gasUtilization: number;
+  proposerDistribution: {
+    address: string;
+    blocks: number;
+    percentage: number;
+  }[];
+}
+
+export interface ActiveAccounts {
+  active24h: number;
+  active7d: number;
+  active30d: number;
+  newAccounts24h: number;
+  growthRate: number;
+}
+
+export interface BridgeAnalytics {
+  totalVolume: string;
+  depositVolume24h: string;
+  withdrawalVolume24h: string;
+  pendingWithdrawals: number;
+  confirmedWithdrawals: number;
+  averageDepositSize: string;
+  averageWithdrawalSize: string;
+  withdrawalSuccessRate: number;
+}
+
+export interface FragmentHealth {
+  totalFragments: number;
+  activeFragments: number;
+  bootstrappingFragments: number;
+  inactiveFragments: number;
+  averageSignersPerFragment: number;
+  totalSigners: number;
+  fragmentSuccessRate: number;
+  averageFeePool: string;
+  topFragments: {
+    fragmentId: string;
+    judgeAddress: string;
+    feePool: string;
+    signersCount: number;
+    status: string;
+  }[];
+}
+
 export interface Account {
   address: string;
   balance: string;
@@ -166,6 +215,10 @@ async function fetchApi<T>(endpoint: string): Promise<T> {
 // Stats
 export const getStats = () => fetchApi<Stats>('/api/stats');
 export const getModuleStats = () => fetchApi<ModuleStats>('/api/stats/modules');
+export const getNetworkPerformance = () => fetchApi<NetworkPerformance>('/api/stats/network-performance');
+export const getActiveAccounts = () => fetchApi<ActiveAccounts>('/api/stats/active-accounts');
+export const getBridgeAnalytics = () => fetchApi<BridgeAnalytics>('/api/stats/bridge-analytics');
+export const getFragmentHealth = () => fetchApi<FragmentHealth>('/api/stats/fragment-health');
 
 // Blocks
 export const getBlocks = (page = 1, limit = 20) =>

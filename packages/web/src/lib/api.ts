@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://143.198.60.224:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://explorer.twilight.org';
 
 export interface Pagination {
   page: number;

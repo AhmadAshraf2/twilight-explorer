@@ -88,10 +88,12 @@ router.get('/deposits/:id', async (req: Request, res: Response) => {
 router.get('/withdrawals', async (req: Request, res: Response) => {
   try {
     const { page, limit } = paginationSchema.parse(req.query);
-    const status = req.query.status as string | undefined;
+    const confirmed = req.query.confirmed as string | undefined;
     const skip = (page - 1) * limit;
 
-    const where = status ? { status } : {};
+    const where: any = {};
+    if (confirmed === 'true') where.isConfirmed = true;
+    if (confirmed === 'false') where.isConfirmed = false;
 
     const [withdrawals, total] = await Promise.all([
       prisma.btcWithdrawal.findMany({
@@ -105,7 +107,6 @@ router.get('/withdrawals', async (req: Request, res: Response) => {
 
     const serialized = withdrawals.map((w) => ({
       ...w,
-      reserveId: w.reserveId.toString(),
       withdrawAmount: w.withdrawAmount.toString(),
     }));
 

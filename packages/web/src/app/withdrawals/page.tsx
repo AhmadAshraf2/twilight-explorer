@@ -3,24 +3,15 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
-import { Wallet, Clock, ArrowUpFromLine } from 'lucide-react';
+import { ArrowUpFromLine, CheckCircle, XCircle } from 'lucide-react';
 import { Pagination } from '@/components/Pagination';
 import { LoadingTable } from '@/components/Loading';
 import { getWithdrawals } from '@/lib/api';
-import clsx from 'clsx';
 
 function formatSatoshis(satoshis: string): string {
   const btc = parseInt(satoshis) / 100000000;
   return btc.toFixed(8) + ' BTC';
 }
-
-const statusColors: Record<string, string> = {
-  pending: 'badge-warning',
-  signed: 'badge-info',
-  broadcast: 'badge-info',
-  confirmed: 'badge-success',
-};
 
 export default function WithdrawalsPage() {
   const [page, setPage] = useState(1);
@@ -66,25 +57,20 @@ export default function WithdrawalsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Amount</th>
                   <th>Twilight Address</th>
                   <th>BTC Address</th>
-                  <th>Status</th>
-                  <th>Time</th>
+                  <th>Confirmed</th>
+                  <th>Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {data.data.map((withdrawal) => (
                   <tr key={withdrawal.id}>
-                    <td className="font-medium">#{withdrawal.id}</td>
                     <td>
-                      <span className="text-accent-orange font-medium">
-                        {formatSatoshis(withdrawal.withdrawAmount)}
-                      </span>
-                    </td>
-                    <td>
-                      <Link href={`/accounts/${withdrawal.twilightAddress}`} className="font-mono text-sm">
+                      <Link
+                        href={`/accounts/${withdrawal.twilightAddress}`}
+                        className="font-mono text-sm text-primary-light hover:text-primary"
+                      >
                         {withdrawal.twilightAddress.substring(0, 20)}...
                       </Link>
                     </td>
@@ -93,23 +79,28 @@ export default function WithdrawalsPage() {
                         href={`https://mempool.space/address/${withdrawal.withdrawAddress}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-sm"
+                        className="font-mono text-sm text-primary-light hover:text-primary"
                       >
-                        {withdrawal.withdrawAddress.substring(0, 16)}...
+                        {withdrawal.withdrawAddress.substring(0, 20)}...
                       </a>
                     </td>
                     <td>
-                      <span
-                        className={clsx('badge', statusColors[withdrawal.status] || 'badge-info')}
-                      >
-                        {withdrawal.status}
-                      </span>
+                      {withdrawal.isConfirmed ? (
+                        <span className="badge badge-success flex items-center gap-1 w-fit">
+                          <CheckCircle className="w-3 h-3" />
+                          Confirmed
+                        </span>
+                      ) : (
+                        <span className="badge badge-warning flex items-center gap-1 w-fit">
+                          <XCircle className="w-3 h-3" />
+                          Pending
+                        </span>
+                      )}
                     </td>
                     <td>
-                      <div className="flex items-center gap-1 text-text-secondary text-sm">
-                        <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(withdrawal.createdAt), { addSuffix: true })}
-                      </div>
+                      <span className="text-accent-orange font-medium">
+                        {formatSatoshis(withdrawal.withdrawAmount)}
+                      </span>
                     </td>
                   </tr>
                 ))}

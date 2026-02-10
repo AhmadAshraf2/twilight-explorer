@@ -351,18 +351,8 @@ async function processCustomMessages(
         });
       }
 
+      // Withdrawals are now synced from LCD endpoint every 20 minutes (see API server)
       if (msgType === MESSAGE_TYPES.WITHDRAW_BTC_REQUEST) {
-        await db.btcWithdrawal.create({
-          data: {
-            txHash: txData.hash,
-            blockHeight,
-            withdrawAddress: data.withdrawAddress as string,
-            reserveId: BigInt(data.reserveId as string),
-            withdrawAmount: BigInt(data.withdrawAmount as string),
-            twilightAddress: data.twilightAddress as string,
-            status: 'pending',
-          },
-        });
         indexerEvents.emit('withdrawal:new', data);
       }
 

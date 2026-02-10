@@ -149,14 +149,12 @@ export interface BtcDeposit {
 
 export interface BtcWithdrawal {
   id: number;
-  txHash: string;
-  blockHeight: number;
+  withdrawIdentifier: number;
   withdrawAddress: string;
-  reserveId: string;
   withdrawAmount: string;
   twilightAddress: string;
-  status: string;
-  btcTxHash: string | null;
+  isConfirmed: boolean;
+  blockHeight: number;
   createdAt: string;
 }
 

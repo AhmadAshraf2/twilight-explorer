@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import pino from 'pino';
+import axios from 'axios';
 import { createServer } from 'http';
 import { PrismaClient } from '@prisma/client';
 
@@ -93,6 +94,38 @@ const server = createServer(app);
 // Create WebSocket server
 const wss = createWebSocketServer(server);
 
+// Sync withdrawals from LCD endpoint
+async function syncWithdrawals() {
+  try {
+    const res = await axios.get(
+      `${config.lcdUrl}/twilight-project/nyks/bridge/withdraw_btc_request_all`,
+      { timeout: 30000 }
+    );
+    const withdrawals = res.data?.withdrawRequest || [];
+
+    let synced = 0;
+    for (const w of withdrawals) {
+      await prisma.btcWithdrawal.upsert({
+        where: { withdrawIdentifier: w.withdrawIdentifier },
+        update: { isConfirmed: w.isConfirmed },
+        create: {
+          withdrawIdentifier: w.withdrawIdentifier,
+          withdrawAddress: w.withdrawAddress,
+          withdrawReserveId: w.withdrawReserveId || '0',
+          withdrawAmount: BigInt(w.withdrawAmount || '0'),
+          twilightAddress: w.twilightAddress,
+          isConfirmed: w.isConfirmed,
+          blockHeight: parseInt(w.CreationTwilightBlockHeight || '0'),
+        },
+      });
+      synced++;
+    }
+    logger.info({ count: synced }, 'Withdrawals synced from LCD');
+  } catch (error) {
+    logger.error({ error }, 'Failed to sync withdrawals from LCD');
+  }
+}
+
 // Start server
 async function main() {
   // Test database connection
@@ -103,6 +136,10 @@ async function main() {
     logger.error({ error }, 'Failed to connect to database');
     process.exit(1);
   }
+
+  // Sync withdrawals from LCD on startup and every 20 minutes
+  syncWithdrawals();
+  setInterval(syncWithdrawals, 20 * 60 * 1000);
 
   server.listen(config.port, config.host, () => {
     logger.info(

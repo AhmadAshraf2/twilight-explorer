@@ -246,6 +246,21 @@ export const getZkosTransfers = (page = 1, limit = 20) =>
 export const search = (query: string) =>
   fetchApi<any>(`/api/twilight/search?q=${encodeURIComponent(query)}`);
 
+// Delegate keys (Forks)
+export interface DelegateKey {
+  id: number;
+  txHash: string;
+  blockHeight: number;
+  validatorAddress: string;
+  btcOracleAddress: string;
+  btcPublicKey: string;
+  zkOracleAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const getDelegates = () => fetchApi<DelegateKey[]>('/api/twilight/delegates');
+
 // Script address transactions
 export const getTransactionsByScript = (scriptAddress: string, page = 1, limit = 20) =>
   fetchApi<PaginatedResponse<Transaction> & { scriptAddress: string }>(
@@ -274,3 +289,60 @@ export const getSweepAddresses = async (limit = 50): Promise<SweepAddressesRespo
   }
   return response.json();
 };
+
+// Validators (Cosmos SDK staking) from LCD
+export interface LcdStakingValidator {
+  operator_address: string;
+  jailed: boolean;
+  status: string; // e.g. "BOND_STATUS_BONDED"
+  tokens: string;
+  description: {
+    moniker: string;
+    identity?: string;
+    website?: string;
+    details?: string;
+  };
+  commission?: {
+    commission_rates?: {
+      rate?: string;
+    };
+  };
+}
+
+export interface LcdValidatorsResponse {
+  validators: LcdStakingValidator[];
+  pagination?: {
+    next_key: string | null;
+    total?: string;
+  };
+}
+
+export async function getValidatorCount(status: string = 'BOND_STATUS_BONDED'): Promise<number> {
+  const url = new URL(`${LCD_URL}/cosmos/staking/v1beta1/validators`);
+  url.searchParams.set('status', status);
+  url.searchParams.set('pagination.limit', '1');
+  url.searchParams.set('pagination.count_total', 'true');
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`LCD API error: ${response.status}`);
+  }
+  const data = (await response.json()) as LcdValidatorsResponse;
+  const total = data.pagination?.total;
+  return total ? parseInt(total, 10) : (data.validators?.length ?? 0);
+}
+
+export async function getValidatorsBasic(
+  limit: number = 100,
+  status: string = 'BOND_STATUS_BONDED'
+): Promise<LcdValidatorsResponse> {
+  const url = new URL(`${LCD_URL}/cosmos/staking/v1beta1/validators`);
+  url.searchParams.set('status', status);
+  url.searchParams.set('pagination.limit', String(limit));
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`LCD API error: ${response.status}`);
+  }
+  return response.json();
+}

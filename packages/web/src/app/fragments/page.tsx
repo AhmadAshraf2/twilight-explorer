@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Puzzle, Users, CheckCircle, XCircle, ChevronDown, ChevronUp, Bitcoin, Copy, Check } from 'lucide-react';
 import { LoadingTable } from '@/components/Loading';
-import { getFragmentsLive, getSweepAddresses, FragmentLive, SweepAddress } from '@/lib/api';
+import { getDelegates, getFragmentsLive, getSweepAddresses, type DelegateKey, FragmentLive, SweepAddress } from '@/lib/api';
 import { useState, useMemo } from 'react';
 
 function formatSatoshis(satoshis: string): string {
@@ -37,8 +37,17 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function FragmentRow({ fragment, sweepAddress }: { fragment: FragmentLive; sweepAddress?: SweepAddress }) {
+function FragmentRow({
+  fragment,
+  sweepAddress,
+  delegateByValidator,
+}: {
+  fragment: FragmentLive;
+  sweepAddress?: SweepAddress;
+  delegateByValidator: Map<string, DelegateKey>;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const judgeHasKeys = delegateByValidator.has(fragment.judgeAddress);
 
   return (
     <>
@@ -63,13 +72,26 @@ function FragmentRow({ fragment, sweepAddress }: { fragment: FragmentLive; sweep
           )}
         </td>
         <td>
-          <Link
-            href={`/accounts/${fragment.judgeAddress}`}
-            className="font-mono text-sm text-primary-light hover:text-primary"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {fragment.judgeAddress.substring(0, 20)}...
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/accounts/${fragment.judgeAddress}`}
+              className="font-mono text-sm text-primary-light hover:text-primary"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {fragment.judgeAddress.substring(0, 20)}...
+            </Link>
+            {judgeHasKeys && (
+              <Link
+                href="/validators"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium bg-primary/10 text-primary-light border border-primary/20 hover:bg-primary/15 transition-colors"
+                title="Judge has custody delegate keys registered (Forks module)"
+              >
+                <Users className="w-3 h-3" />
+                Keys
+              </Link>
+            )}
+          </div>
         </td>
         <td className="text-text-secondary">{fragment.threshold}</td>
         <td>
@@ -162,13 +184,26 @@ function FragmentRow({ fragment, sweepAddress }: { fragment: FragmentLive; sweep
                         {fragment.signers.map((signer, idx) => (
                           <tr key={idx} className="border-t border-border">
                             <td className="py-2">
-                              <Link
-                                href={`/accounts/${signer.signerAddress}`}
-                                className="font-mono text-xs text-primary-light hover:text-primary"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {signer.signerAddress.substring(0, 24)}...
-                              </Link>
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  href={`/accounts/${signer.signerAddress}`}
+                                  className="font-mono text-xs text-primary-light hover:text-primary"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {signer.signerAddress.substring(0, 24)}...
+                                </Link>
+                                {delegateByValidator.has(signer.signerAddress) && (
+                                  <Link
+                                    href="/validators"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary-light border border-primary/20 hover:bg-primary/15 transition-colors"
+                                    title="Signer has custody delegate keys registered (Forks module)"
+                                  >
+                                    <Users className="w-3 h-3" />
+                                    Keys
+                                  </Link>
+                                )}
+                              </div>
                             </td>
                             <td className="py-2">
                               {signer.status ? (
@@ -206,10 +241,23 @@ export default function FragmentsPage() {
     queryFn: getFragmentsLive,
   });
 
+  const { data: delegates } = useQuery({
+    queryKey: ['delegates'],
+    queryFn: getDelegates,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+
   const { data: sweepData } = useQuery({
     queryKey: ['sweep-addresses'],
     queryFn: () => getSweepAddresses(100),
   });
+
+  const delegateByValidator = useMemo(() => {
+    const map = new Map<string, DelegateKey>();
+    for (const d of delegates ?? []) map.set(d.validatorAddress, d);
+    return map;
+  }, [delegates]);
 
   // Create a map of judgeAddress to their latest sweep address (highest roundId)
   const latestSweepByJudge = useMemo(() => {
@@ -272,6 +320,7 @@ export default function FragmentsPage() {
                         key={fragment.id}
                         fragment={fragment}
                         sweepAddress={latestSweepByJudge.get(fragment.judgeAddress)}
+                        delegateByValidator={delegateByValidator}
                       />
                     ))}
                   </tbody>

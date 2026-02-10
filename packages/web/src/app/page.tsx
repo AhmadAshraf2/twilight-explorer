@@ -18,7 +18,7 @@ import {
 import { StatsCard } from '@/components/StatsCard';
 import { LoadingCard, LoadingTable } from '@/components/Loading';
 import { SearchBar } from '@/components/SearchBar';
-import { getStats, getModuleStats, getBlocks, getRecentTransactions } from '@/lib/api';
+import { getStats, getModuleStats, getBlocks, getRecentTransactions, getValidatorCount } from '@/lib/api';
 import { HeroPanel } from '@/components/dashboard/HeroPanel';
 //import { InfoFooter } from '@/components/dashboard/InfoFooter';
 function formatAgeShort(ts: string) {
@@ -40,6 +40,13 @@ export default function Dashboard() {
   const { data: moduleStats, isLoading: moduleStatsLoading } = useQuery({
     queryKey: ['moduleStats'],
     queryFn: getModuleStats,
+  });
+
+  const { data: validatorCount, isLoading: validatorCountLoading } = useQuery({
+    queryKey: ['validatorCount', 'BOND_STATUS_BONDED'],
+    queryFn: () => getValidatorCount('BOND_STATUS_BONDED'),
+    staleTime: 60_000,
+    refetchInterval: 120_000,
   });
 
   const { data: blocksData, isLoading: blocksLoading } = useQuery({
@@ -107,9 +114,10 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            {moduleStatsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            {moduleStatsLoading || validatorCountLoading ? (
               <>
+                <LoadingCard />
                 <LoadingCard />
                 <LoadingCard />
                 <LoadingCard />
@@ -123,6 +131,7 @@ export default function Dashboard() {
                   value={moduleStats?.bridge.withdrawals || 0}
                   icon={Wallet}
                 />
+                <StatsCard title="Validators" value={validatorCount || 0} icon={Users} subtitle="Bonded (LCD)" />
                 <StatsCard
                   title="Active Fragments"
                   value={moduleStats?.volt.activeFragments || 0}

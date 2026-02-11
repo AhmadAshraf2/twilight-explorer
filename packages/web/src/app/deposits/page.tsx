@@ -238,7 +238,7 @@ export default function DepositsPage() {
               <table>
                 <thead>
                   <tr>
-                    <th><SortHeader field="id">ID</SortHeader></th>
+                    <th>#</th>
                     <th><SortHeader field="amount">Amount</SortHeader></th>
                     <th>Status</th>
                     <th>Votes</th>
@@ -255,7 +255,7 @@ export default function DepositsPage() {
                 <tbody>
                   {sortedDeposits.map((deposit) => (
                     <tr key={deposit.id} className="hover:bg-background-tertiary transition-colors">
-                      <td className="font-medium font-mono">#{deposit.id}</td>
+                      <td className="text-text-secondary text-sm">•</td>
                       <td>
                         <span className="text-accent-green font-medium">
                           {formatSatoshis(deposit.depositAmount)}

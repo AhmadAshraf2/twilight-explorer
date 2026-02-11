@@ -175,6 +175,7 @@ const options: swaggerJsdoc.Options = {
       { name: 'Fragments', description: 'Twilight fragments and signers' },
       { name: 'zkOS', description: 'zkOS transfers and mint/burn operations' },
       { name: 'Search', description: 'Global search across entities' },
+      { name: 'Bitcoin', description: 'Bitcoin node data (block height, fee estimates)' },
       { name: 'Health', description: 'Server health checks' },
     ],
     paths: {
@@ -782,6 +783,22 @@ const options: swaggerJsdoc.Options = {
               content: { 'application/json': { schema: { type: 'object', properties: { block: { $ref: '#/components/schemas/Block' }, transaction: { $ref: '#/components/schemas/Transaction' }, account: { $ref: '#/components/schemas/Account' }, deposits: { type: 'array', items: { $ref: '#/components/schemas/Deposit' } } } } } },
             },
             400: { description: 'Query too short (min 3 characters)' },
+          },
+        },
+      },
+
+      // ===================== Bitcoin =====================
+      '/api/bitcoin/info': {
+        get: {
+          tags: ['Bitcoin'],
+          summary: 'Get Bitcoin node info',
+          description: 'Returns the latest Bitcoin block height and current fee estimate from the connected BTC node. Cached for 30 seconds.',
+          responses: {
+            200: {
+              description: 'Bitcoin node info',
+              content: { 'application/json': { schema: { type: 'object', properties: { blockHeight: { type: 'integer', example: 878000 }, feeEstimate: { type: 'object', properties: { satPerVbyte: { type: 'integer', nullable: true, example: 12, description: 'Fee rate in sat/vB' }, btcPerKb: { type: 'number', nullable: true, example: 0.00012, description: 'Fee rate in BTC/kB (raw from node)' }, targetBlocks: { type: 'integer', example: 6, description: 'Confirmation target in blocks' } } } } } } },
+            },
+            500: { description: 'Failed to reach Bitcoin node' },
           },
         },
       },

@@ -315,7 +315,6 @@ export default function ValidatorsPage() {
                     <SortButton field="commission">Commission</SortButton>
                   </th>
                   <th>Custody</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -358,9 +357,14 @@ function ValidatorRow({
   return (
     <tr>
       <td className="text-text-secondary font-mono text-sm">#{rank}</td>
-      <td className="font-medium text-white">
+      <td className="font-medium">
         <div className="flex items-center gap-2">
-          <span>{moniker}</span>
+          <Link
+            href={`/validators/${validator.operator_address}`}
+            className="text-white hover:text-primary-light transition-colors"
+          >
+            {moniker}
+          </Link>
           {website && (
             <a
               href={website}
@@ -422,14 +426,6 @@ function ValidatorRow({
         ) : (
           <span className="text-text-muted text-xs">—</span>
         )}
-      </td>
-      <td>
-        <Link
-          href={`/validators/${validator.operator_address}`}
-          className="text-primary-light hover:text-primary transition-colors text-sm font-medium"
-        >
-          View Details →
-        </Link>
       </td>
     </tr>
   );

@@ -325,7 +325,7 @@ export default function WithdrawalsPage() {
                         )}
                       </td>
                       <td>
-                        <span className="text-accent-orange font-medium">
+                        <span className="text-accent-red font-medium">
                           {formatSatoshis(withdrawal.withdrawAmount)}
                         </span>
                       </td>

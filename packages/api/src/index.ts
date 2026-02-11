@@ -20,6 +20,7 @@ import accountsRouter from './routes/accounts.js';
 import statsRouter from './routes/stats.js';
 import twilightRouter from './routes/twilight.js';
 import validatorsRouter from './routes/validators.js';
+import bitcoinRouter from './routes/bitcoin.js';
 
 const logger = pino({
   transport: {
@@ -90,6 +91,7 @@ app.use('/api/accounts', accountsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/twilight', twilightRouter);
 app.use('/api/validators', validatorsRouter);
+app.use('/api/bitcoin', bitcoinRouter);
 
 // 404 handler
 app.use((req, res) => {

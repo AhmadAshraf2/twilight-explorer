@@ -416,10 +416,10 @@ router.get('/bridge-analytics', async (req: Request, res: Response) => {
         // Get withdrawal status counts
         const [pendingWithdrawals, confirmedWithdrawals, totalWithdrawals] = await Promise.all([
           prisma.btcWithdrawal.count({
-            where: { status: 'pending' },
+            where: { isConfirmed: false },
           }),
           prisma.btcWithdrawal.count({
-            where: { status: 'confirmed' },
+            where: { isConfirmed: true },
           }),
           prisma.btcWithdrawal.count(),
         ]);

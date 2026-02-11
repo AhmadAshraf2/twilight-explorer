@@ -12,7 +12,7 @@ export const config = {
   lcdUrl: process.env.TWILIGHT_LCD_URL || 'https://lcd.twilight.org',
   zkosDecodeUrl: process.env.ZKOS_DECODE_URL || 'https://indexer.twilight.org',
   btcRpc: {
-    url: process.env.BTC_RPC_URL || 'http://143.198.60.224:8332',
+    url: process.env.BTC_RPC_URL || 'http://143.244.138.170:8332',
     user: process.env.BTC_RPC_USER || 'bitcoin',
     password: process.env.BTC_RPC_PASSWORD || '',
   },

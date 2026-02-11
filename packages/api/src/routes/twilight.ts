@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { config } from '../config.js';
+import { withCache, getCache, CACHE_TTL, CACHE_KEYS } from '../cache.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -184,49 +185,157 @@ router.get('/reserves/:id', async (req: Request, res: Response) => {
 });
 
 // ============================================
+// Sweep Addresses (Bridge - LCD)
+// ============================================
+
+// GET /api/twilight/sweep-addresses - Fetch propose sweep addresses from LCD (cached)
+router.get('/sweep-addresses', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+    const data = await withCache(
+      CACHE_KEYS.SWEEP_ADDRESSES(limit),
+      CACHE_TTL.SWEEP_ADDRESSES,
+      async () => {
+        const response = await fetch(
+          `${LCD_URL}/twilight-project/nyks/bridge/propose_sweep_addresses_all/${limit}`
+        );
+        if (!response.ok) {
+          throw new Error(`LCD API error: ${response.status}`);
+        }
+        return response.json();
+      }
+    );
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching sweep addresses from LCD:', error);
+    res.status(500).json({ error: 'Failed to fetch sweep addresses from LCD' });
+  }
+});
+
+// ============================================
 // Fragments
 // ============================================
 
-// GET /api/twilight/fragments/live - Fetch fragments directly from LCD
+// GET /api/twilight/fragments/live - Fetch fragments from LCD (cached)
 // NOTE: This route MUST be before /fragments/:id to avoid "live" being matched as an ID
 router.get('/fragments/live', async (req: Request, res: Response) => {
   try {
-    const response = await fetch(`${LCD_URL}/twilight-project/nyks/volt/get_all_fragments`);
-    if (!response.ok) {
-      throw new Error(`LCD API error: ${response.status}`);
-    }
-    const data = await response.json() as any;
+    const data = await withCache(
+      CACHE_KEYS.FRAGMENTS_LIVE,
+      CACHE_TTL.FRAGMENTS,
+      async () => {
+        const response = await fetch(`${LCD_URL}/twilight-project/nyks/volt/get_all_fragments`);
+        if (!response.ok) {
+          throw new Error(`LCD API error: ${response.status}`);
+        }
+        const raw = await response.json() as any;
 
-    // Transform the data to a more usable format
-    const fragments = (data.Fragments || []).map((f: any) => ({
-      id: f.FragmentId,
-      status: f.FragmentStatus,
-      judgeAddress: f.JudgeAddress,
-      judgeStatus: f.JudgeStatus,
-      threshold: parseInt(f.Threshold || '0', 10),
-      signerApplicationFee: f.SignerApplicationFee,
-      feePool: f.FeePool,
-      feeBips: parseInt(f.FragmentFeeBips || '0', 10),
-      arbitraryData: f.arbitraryData || null,
-      reserveIds: f.ReserveIds || [],
-      signers: (f.Signers || []).map((s: any) => ({
-        fragmentId: s.FragmentID,
-        signerAddress: s.SignerAddress,
-        status: s.SignerStatus,
-        btcPubKey: s.SignerBtcPublicKey,
-        applicationFee: s.SignerApplicationFee,
-        feeBips: parseInt(s.SignerFeeBips || '0', 10),
-      })),
-      signersCount: (f.Signers || []).length,
-    }));
+        const fragments = (raw.Fragments || []).map((f: any) => ({
+          id: f.FragmentId,
+          status: f.FragmentStatus,
+          judgeAddress: f.JudgeAddress,
+          judgeStatus: f.JudgeStatus,
+          threshold: parseInt(f.Threshold || '0', 10),
+          signerApplicationFee: f.SignerApplicationFee,
+          feePool: f.FeePool,
+          feeBips: parseInt(f.FragmentFeeBips || '0', 10),
+          arbitraryData: f.arbitraryData || null,
+          reserveIds: f.ReserveIds || [],
+          signers: (f.Signers || []).map((s: any) => ({
+            fragmentId: s.FragmentID,
+            signerAddress: s.SignerAddress,
+            status: s.SignerStatus,
+            btcPubKey: s.SignerBtcPublicKey,
+            applicationFee: s.SignerApplicationFee,
+            feeBips: parseInt(s.SignerFeeBips || '0', 10),
+          })),
+          signersCount: (f.Signers || []).length,
+        }));
 
-    res.json({
-      data: fragments,
-      total: fragments.length,
-    });
+        return { data: fragments, total: fragments.length };
+      }
+    );
+
+    res.json(data);
   } catch (error) {
     console.error('Error fetching fragments from LCD:', error);
     res.status(500).json({ error: 'Failed to fetch fragments from LCD' });
+  }
+});
+
+// Transform raw LCD fragment to API format
+function transformFragment(f: any, id: string) {
+  return {
+    id: f.FragmentId ?? id,
+    status: f.FragmentStatus,
+    judgeAddress: f.JudgeAddress,
+    judgeStatus: f.JudgeStatus,
+    threshold: parseInt(f.Threshold || '0', 10),
+    signerApplicationFee: f.SignerApplicationFee,
+    feePool: f.FeePool,
+    feeBips: parseInt(f.FragmentFeeBips || '0', 10),
+    arbitraryData: f.arbitraryData || null,
+    reserveIds: f.ReserveIds || [],
+    signers: (f.Signers || []).map((s: any) => ({
+      fragmentId: s.FragmentID,
+      signerAddress: s.SignerAddress,
+      status: s.SignerStatus,
+      btcPubKey: s.SignerBtcPublicKey,
+      applicationFee: s.SignerApplicationFee,
+      feeBips: parseInt(s.SignerFeeBips || '0', 10),
+    })),
+    signersCount: (f.Signers || []).length,
+  };
+}
+
+// GET /api/twilight/fragments/live/:id - Fetch single fragment from LCD (cached)
+// NOTE: Must be after /fragments/live to match /fragments/live/:id
+// Uses get_all_fragments and finds by id (reuses cached list when available)
+router.get('/fragments/live/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+
+    // Try cached fragments list first (avoids extra LCD call when list was recently fetched)
+    const cachedList = await getCache<{ data: any[]; total: number }>(CACHE_KEYS.FRAGMENTS_LIVE);
+    if (cachedList?.data) {
+      const found = cachedList.data.find((f: any) => String(f.id) === String(id));
+      if (found) {
+        return res.json(found);
+      }
+      // Fragment not in list - return 404 without extra LCD call
+      return res.status(404).json({ error: 'Fragment not found' });
+    }
+
+    // Fetch via cache: get all fragments and find by id
+    const data = await withCache(
+      CACHE_KEYS.FRAGMENT_SINGLE(id),
+      CACHE_TTL.FRAGMENT_SINGLE,
+      async () => {
+        const response = await fetch(`${LCD_URL}/twilight-project/nyks/volt/get_all_fragments`);
+        if (!response.ok) {
+          throw new Error(`LCD API error: ${response.status}`);
+        }
+        const raw = await response.json() as any;
+        const fragments = raw.Fragments || raw.fragments || [];
+        const fragment = fragments.find(
+          (f: any) =>
+            String(f.FragmentId ?? f.fragmentId ?? f.id ?? '') === String(id)
+        );
+        if (fragment) {
+          return transformFragment(fragment, id);
+        }
+        return null;
+      }
+    );
+
+    if (!data) {
+      return res.status(404).json({ error: 'Fragment not found' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching fragment from LCD:', error);
+    res.status(500).json({ error: 'Failed to fetch fragment from LCD' });
   }
 });
 

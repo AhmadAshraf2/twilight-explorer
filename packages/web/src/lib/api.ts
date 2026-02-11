@@ -331,15 +331,13 @@ export interface SweepAddressesResponse {
   proposeSweepAddressMsgs: SweepAddress[];
 }
 
-const LCD_URL = 'https://lcd.twilight.org';
+// Sweep addresses (cached via API)
+export const getSweepAddresses = (limit = 100): Promise<SweepAddressesResponse> =>
+  fetchApi<SweepAddressesResponse>(`/api/twilight/sweep-addresses?limit=${limit}`);
 
-export const getSweepAddresses = async (limit = 50): Promise<SweepAddressesResponse> => {
-  const response = await fetch(`${LCD_URL}/twilight-project/nyks/bridge/propose_sweep_addresses_all/${limit}`);
-  if (!response.ok) {
-    throw new Error(`LCD API error: ${response.status}`);
-  }
-  return response.json();
-};
+// Single fragment from LCD (cached via API)
+export const getFragment = (id: string): Promise<FragmentLive> =>
+  fetchApi<FragmentLive>(`/api/twilight/fragments/live/${id}`);
 
 // Validators (Cosmos SDK staking) from LCD
 export interface LcdStakingValidator {

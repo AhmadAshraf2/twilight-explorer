@@ -151,6 +151,7 @@ export interface BtcWithdrawal {
   id: number;
   withdrawIdentifier: number;
   withdrawAddress: string;
+  withdrawReserveId: string;
   withdrawAmount: string;
   twilightAddress: string;
   isConfirmed: boolean;
@@ -277,11 +278,29 @@ export const getAccountTransactions = (address: string, page = 1, limit = 20) =>
   fetchApi<PaginatedResponse<Transaction>>(`/api/accounts/${address}/transactions?page=${page}&limit=${limit}`);
 
 // Twilight-specific
-export const getDeposits = (page = 1, limit = 20) =>
-  fetchApi<PaginatedResponse<BtcDeposit>>(`/api/twilight/deposits?page=${page}&limit=${limit}`);
+export const getDeposits = (page = 1, limit = 20, params?: { search?: string }) => {
+  const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (params?.search?.trim()) qs.set('search', params.search.trim());
+  return fetchApi<PaginatedResponse<BtcDeposit>>(`/api/twilight/deposits?${qs}`);
+};
 
-export const getWithdrawals = (page = 1, limit = 20) =>
-  fetchApi<PaginatedResponse<BtcWithdrawal>>(`/api/twilight/withdrawals?page=${page}&limit=${limit}`);
+export const getDeposit = (id: string) =>
+  fetchApi<BtcDeposit>(`/api/twilight/deposits/${id}`);
+
+export const getWithdrawals = (
+  page = 1,
+  limit = 20,
+  params?: { confirmed?: boolean; search?: string }
+) => {
+  const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (params?.confirmed === true) qs.set('confirmed', 'true');
+  if (params?.confirmed === false) qs.set('confirmed', 'false');
+  if (params?.search?.trim()) qs.set('search', params.search.trim());
+  return fetchApi<PaginatedResponse<BtcWithdrawal>>(`/api/twilight/withdrawals?${qs}`);
+};
+
+export const getWithdrawal = (id: string) =>
+  fetchApi<BtcWithdrawal>(`/api/twilight/withdrawals/${id}`);
 
 export const getReserves = () => fetchApi<any[]>('/api/twilight/reserves');
 

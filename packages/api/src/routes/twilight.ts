@@ -24,15 +24,35 @@ const paginationSchema = z.object({
 router.get('/deposits', async (req: Request, res: Response) => {
   try {
     const { page, limit } = paginationSchema.parse(req.query);
+    const address = req.query.address as string | undefined;
+    const reserveAddress = req.query.reserveAddress as string | undefined;
+    const search = req.query.search as string | undefined;
     const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (search?.trim()) {
+      const q = search.trim();
+      where.OR = [
+        { twilightDepositAddress: { contains: q, mode: 'insensitive' } },
+        { reserveAddress: { contains: q, mode: 'insensitive' } },
+      ];
+    } else {
+      if (address?.trim()) {
+        where.twilightDepositAddress = { contains: address.trim(), mode: 'insensitive' };
+      }
+      if (reserveAddress?.trim()) {
+        where.reserveAddress = { contains: reserveAddress.trim(), mode: 'insensitive' };
+      }
+    }
 
     const [deposits, total] = await Promise.all([
       prisma.btcDeposit.findMany({
+        where,
         orderBy: { blockHeight: 'desc' },
         skip,
         take: limit,
       }),
-      prisma.btcDeposit.count(),
+      prisma.btcDeposit.count({ where }),
     ]);
 
     const serialized = deposits.map((d) => ({
@@ -90,11 +110,28 @@ router.get('/withdrawals', async (req: Request, res: Response) => {
   try {
     const { page, limit } = paginationSchema.parse(req.query);
     const confirmed = req.query.confirmed as string | undefined;
+    const address = req.query.address as string | undefined;
+    const withdrawAddress = req.query.withdrawAddress as string | undefined;
+    const search = req.query.search as string | undefined;
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (confirmed === 'true') where.isConfirmed = true;
     if (confirmed === 'false') where.isConfirmed = false;
+    if (search?.trim()) {
+      const q = search.trim();
+      where.OR = [
+        { twilightAddress: { contains: q, mode: 'insensitive' } },
+        { withdrawAddress: { contains: q, mode: 'insensitive' } },
+      ];
+    } else {
+      if (address?.trim()) {
+        where.twilightAddress = { contains: address.trim(), mode: 'insensitive' };
+      }
+      if (withdrawAddress?.trim()) {
+        where.withdrawAddress = { contains: withdrawAddress.trim(), mode: 'insensitive' };
+      }
+    }
 
     const [withdrawals, total] = await Promise.all([
       prisma.btcWithdrawal.findMany({
@@ -122,6 +159,30 @@ router.get('/withdrawals', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching withdrawals:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/twilight/withdrawals/:id - Get withdrawal by ID
+router.get('/withdrawals/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid withdrawal ID' });
+    }
+
+    const withdrawal = await prisma.btcWithdrawal.findUnique({ where: { id } });
+
+    if (!withdrawal) {
+      return res.status(404).json({ error: 'Withdrawal not found' });
+    }
+
+    res.json({
+      ...withdrawal,
+      withdrawAmount: withdrawal.withdrawAmount.toString(),
+    });
+  } catch (error) {
+    console.error('Error fetching withdrawal:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

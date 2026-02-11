@@ -361,7 +361,7 @@ function ValidatorRow({
         <div className="flex items-center gap-2">
           <Link
             href={`/validators/${validator.operator_address}`}
-            className="text-white hover:text-primary-light transition-colors"
+            className="text-primary-light hover:text-primary transition-colors"
           >
             {moniker}
           </Link>

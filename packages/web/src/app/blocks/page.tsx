@@ -52,8 +52,9 @@ export default function BlocksPage() {
               <thead>
                 <tr>
                   <th>Height</th>
+                  <th>Proposer</th>
                   <th>Hash</th>
-                  <th>Transactions</th>
+                  <th>Txs</th>
                   <th>Gas Used</th>
                   <th>Time</th>
                 </tr>
@@ -65,6 +66,18 @@ export default function BlocksPage() {
                       <Link href={`/blocks/${block.height}`} className="font-medium">
                         #{block.height.toLocaleString()}
                       </Link>
+                    </td>
+                    <td>
+                      {block.proposerOperator ? (
+                        <Link
+                          href={`/validators/${block.proposerOperator}`}
+                          className="text-primary-light hover:text-primary text-sm"
+                        >
+                          {block.proposerMoniker || 'Unknown'}
+                        </Link>
+                      ) : (
+                        <span className="text-text-muted text-sm">—</span>
+                      )}
                     </td>
                     <td>
                       <span className="font-mono text-text-secondary text-sm">

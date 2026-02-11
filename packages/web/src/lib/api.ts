@@ -17,6 +17,8 @@ export interface Block {
   hash: string;
   timestamp: string;
   proposer: string | null;
+  proposerMoniker: string | null;
+  proposerOperator: string | null;
   txCount: number;
   gasUsed: string;
   gasWanted: string;

@@ -14,6 +14,10 @@ interface CoinBalance {
 }
 
 async function fetchLcdBalances(address: string): Promise<CoinBalance[]> {
+  // Validator operator addresses (twilightvaloper) are not supported by the bank API
+  if (address.startsWith('twilightvaloper')) {
+    return [];
+  }
   try {
     const response = await axios.get(
       `${config.lcdUrl}/cosmos/bank/v1beta1/balances/${address}`,

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { withCache, CACHE_TTL, CACHE_KEYS } from '../cache.js';
 import { config } from '../config.js';
 
@@ -41,6 +42,39 @@ interface LcdValidatorsResponse {
     next_key: string | null;
     total?: string;
   };
+}
+
+interface LcdStakingValidatorFull extends LcdStakingValidator {
+  consensus_pubkey?: { '@type': string; key: string };
+}
+
+interface LcdStakingValidatorsFullResponse {
+  validators: LcdStakingValidatorFull[];
+  pagination?: { next_key: string | null; total?: string };
+}
+
+// Derive the base64 proposer address from an operator address
+// 1. Fetch staking validators to get consensus_pubkey for the operator address
+// 2. SHA256(base64_decode(pubkey)) → take first 20 bytes → base64 encode
+async function getProposerAddress(operatorAddress: string): Promise<string | null> {
+  const cacheKey = `cache:proposer-map:${operatorAddress}`;
+
+  return withCache(cacheKey, CACHE_TTL.VALIDATORS, async () => {
+    const url = new URL(`${LCD_URL}/cosmos/staking/v1beta1/validators`);
+    url.searchParams.set('pagination.limit', '200');
+
+    const response = await fetch(url.toString());
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as LcdStakingValidatorsFullResponse;
+    const validator = data.validators.find((v) => v.operator_address === operatorAddress);
+    if (!validator?.consensus_pubkey?.key) return null;
+
+    const pubkeyBytes = Buffer.from(validator.consensus_pubkey.key, 'base64');
+    const sha256Hash = crypto.createHash('sha256').update(pubkeyBytes).digest();
+    const first20 = sha256Hash.subarray(0, 20);
+    return first20.toString('base64');
+  });
 }
 
 // GET /api/validators - List validators (cached, queries LCD)
@@ -125,15 +159,27 @@ router.get('/:address/blocks', async (req: Request, res: Response) => {
       cacheKey,
       CACHE_TTL.VALIDATOR_BLOCKS,
       async () => {
+        // Map operator address to the base64 consensus proposer address stored in blocks
+        const proposerAddress = await getProposerAddress(address);
+        if (!proposerAddress) {
+          return {
+            totalBlocks: 0,
+            blocks24h: 0,
+            blocks7d: 0,
+            percentage: 0,
+            lastBlock: null,
+          };
+        }
+
         // Get total blocks produced
         const totalBlocks = await prisma.block.count({
-          where: { proposer: address },
+          where: { proposer: proposerAddress },
         });
 
         // Get blocks in last 24h
         const blocks24h = await prisma.block.count({
           where: {
-            proposer: address,
+            proposer: proposerAddress,
             timestamp: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
           },
         });
@@ -141,14 +187,14 @@ router.get('/:address/blocks', async (req: Request, res: Response) => {
         // Get blocks in last 7d
         const blocks7d = await prisma.block.count({
           where: {
-            proposer: address,
+            proposer: proposerAddress,
             timestamp: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
           },
         });
 
         // Get last block proposed
         const lastBlock = await prisma.block.findFirst({
-          where: { proposer: address },
+          where: { proposer: proposerAddress },
           orderBy: { height: 'desc' },
           select: {
             height: true,

@@ -8,8 +8,10 @@ import axios from 'axios';
 import { createServer } from 'http';
 import { PrismaClient } from '@prisma/client';
 
+import swaggerUi from 'swagger-ui-express';
 import { config } from './config.js';
 import { createWebSocketServer } from './websocket.js';
+import { swaggerSpec } from './swagger.js';
 
 // Import routes
 import blocksRouter from './routes/blocks.js';
@@ -32,6 +34,9 @@ const logger = pino({
 
 const app = express();
 const prisma = new PrismaClient();
+
+// Trust proxy (behind Nginx)
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(helmet());
@@ -70,6 +75,13 @@ app.get('/health', async (req, res) => {
     res.status(503).json({ status: 'unhealthy', error: 'Database connection failed' });
   }
 });
+
+// Swagger API docs
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Twilight Explorer API Docs',
+  customCss: '.swagger-ui .topbar { display: none }',
+}));
+app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
 
 // API Routes
 app.use('/api/blocks', blocksRouter);

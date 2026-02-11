@@ -69,8 +69,8 @@ export default function Dashboard() {
   const { data: validatorCount, isLoading: validatorCountLoading } = useQuery({
     queryKey: ['validatorCount', 'BOND_STATUS_BONDED'],
     queryFn: () => getValidatorCount('BOND_STATUS_BONDED'),
-    staleTime: 60_000,
-    refetchInterval: 120_000,
+    staleTime: 600_000, // 10 minutes (matches cache TTL)
+    refetchInterval: false, // No auto-refetch, rely on cache
   });
 
   const { data: networkPerformance, isLoading: networkPerfLoading } = useQuery({

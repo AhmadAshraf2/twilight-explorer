@@ -16,6 +16,7 @@ import transactionsRouter from './routes/transactions.js';
 import accountsRouter from './routes/accounts.js';
 import statsRouter from './routes/stats.js';
 import twilightRouter from './routes/twilight.js';
+import validatorsRouter from './routes/validators.js';
 
 const logger = pino({
   transport: {
@@ -75,6 +76,7 @@ app.use('/api/txs', transactionsRouter);
 app.use('/api/accounts', accountsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/twilight', twilightRouter);
+app.use('/api/validators', validatorsRouter);
 
 // 404 handler
 app.use((req, res) => {

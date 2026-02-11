@@ -83,8 +83,12 @@ router.get('/', async (req: Request, res: Response) => {
         matchingHashes = mintBurns.map((mb) => mb.txHash);
       } else {
         // Query zkosTransfer table using the programType column
+        // Merge SettleTraderOrderNegativeMarginDifference into SettleTraderOrder
+        const programTypes = filters.programType === 'SettleTraderOrder'
+          ? ['SettleTraderOrder', 'SettleTraderOrderNegativeMarginDifference']
+          : [filters.programType];
         const zkosTransfers = await prisma.zkosTransfer.findMany({
-          where: { programType: filters.programType },
+          where: { programType: { in: programTypes } },
           select: { txHash: true },
         });
         matchingHashes = zkosTransfers.map((zt) => zt.txHash);
@@ -138,12 +142,15 @@ router.get('/', async (req: Request, res: Response) => {
 
     const programTypeMap = new Map<string, string | null>();
 
-    // Add ZkosTransfer programTypes
+    // Add ZkosTransfer programTypes (merge SettleTraderOrderNegativeMarginDifference → SettleTraderOrder)
     for (const zt of zkosTransfers) {
-      const programType = zt.programType
+      let programType = zt.programType
         || (zt.decodedData as any)?.summary?.program_type
         || (zt.decodedData as any)?.tx_type
         || null;
+      if (programType === 'SettleTraderOrderNegativeMarginDifference') {
+        programType = 'SettleTraderOrder';
+      }
       programTypeMap.set(zt.txHash, programType);
     }
 

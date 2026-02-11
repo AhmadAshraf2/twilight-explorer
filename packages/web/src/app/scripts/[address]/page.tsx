@@ -99,7 +99,7 @@ export default function ScriptPage() {
                     <td>
                       {tx.programType ? (
                         <span className="badge bg-primary/20 text-primary-light">
-                          {tx.programType}
+                          {tx.programType === 'SettleTraderOrderNegativeMarginDifference' ? 'SettleTraderOrder' : tx.programType}
                         </span>
                       ) : (
                         <span className="text-text-secondary">-</span>

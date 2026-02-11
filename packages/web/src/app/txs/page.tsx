@@ -27,7 +27,6 @@ const programTypeFilters = [
   { value: 'RelayerInitializer', label: 'Relayer Initializer' },
   { value: 'CreateTraderOrder', label: 'Create Trader Order' },
   { value: 'SettleTraderOrder', label: 'Settle Trader Order' },
-  { value: 'SettleTraderOrderNegativeMarginDifference', label: 'Settle Trader Order (Negative Margin)' },
   { value: 'CreateLendOrder', label: 'Create Lend Order' },
   { value: 'SettleLendOrder', label: 'Settle Lend Order' },
   { value: 'LiquidateOrder', label: 'Liquidate Order' },
@@ -171,7 +170,7 @@ export default function TransactionsPage() {
                     </td>
                     <td>
                       {tx.programType ? (
-                        <span className="badge bg-primary/20 text-primary-light">{tx.programType}</span>
+                        <span className="badge bg-primary/20 text-primary-light">{tx.programType === 'SettleTraderOrderNegativeMarginDifference' ? 'SettleTraderOrder' : tx.programType}</span>
                       ) : (
                         <span className="text-text-secondary">-</span>
                       )}

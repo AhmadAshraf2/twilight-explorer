@@ -356,6 +356,8 @@ export interface LcdStakingValidator {
   commission?: {
     commission_rates?: {
       rate?: string;
+      max_rate?: string;
+      max_change_rate?: string;
     };
   };
 }
@@ -368,32 +370,39 @@ export interface LcdValidatorsResponse {
   };
 }
 
-export async function getValidatorCount(status: string = 'BOND_STATUS_BONDED'): Promise<number> {
-  const url = new URL(`${LCD_URL}/cosmos/staking/v1beta1/validators`);
-  url.searchParams.set('status', status);
-  url.searchParams.set('pagination.limit', '1');
-  url.searchParams.set('pagination.count_total', 'true');
-
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    throw new Error(`LCD API error: ${response.status}`);
-  }
-  const data = (await response.json()) as LcdValidatorsResponse;
-  const total = data.pagination?.total;
-  return total ? parseInt(total, 10) : (data.validators?.length ?? 0);
+// Validator block production stats (from DB)
+export interface ValidatorBlockStats {
+  totalBlocks: number;
+  blocks24h: number;
+  blocks7d: number;
+  percentage: number;
+  lastBlock: {
+    height: number;
+    hash: string;
+    timestamp: string;
+  } | null;
 }
 
+// Get validator count (cached via API)
+export async function getValidatorCount(status: string = 'BOND_STATUS_BONDED'): Promise<number> {
+  const response = await fetchApi<{ count: number }>(`/api/validators/count?status=${status}`);
+  return response.count;
+}
+
+// Get validators list (cached via API)
 export async function getValidatorsBasic(
   limit: number = 100,
   status: string = 'BOND_STATUS_BONDED'
 ): Promise<LcdValidatorsResponse> {
-  const url = new URL(`${LCD_URL}/cosmos/staking/v1beta1/validators`);
-  url.searchParams.set('status', status);
-  url.searchParams.set('pagination.limit', String(limit));
+  return fetchApi<LcdValidatorsResponse>(`/api/validators?status=${status}&limit=${limit}`);
+}
 
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    throw new Error(`LCD API error: ${response.status}`);
-  }
-  return response.json();
+// Get single validator details (cached via API)
+export async function getValidator(address: string): Promise<LcdStakingValidator> {
+  return fetchApi<LcdStakingValidator>(`/api/validators/${address}`);
+}
+
+// Get validator block production stats (from DB, cached via API)
+export async function getValidatorBlockStats(address: string): Promise<ValidatorBlockStats> {
+  return fetchApi<ValidatorBlockStats>(`/api/validators/${address}/blocks`);
 }

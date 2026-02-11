@@ -144,6 +144,8 @@ export interface BtcDeposit {
   btcHash: string;
   twilightDepositAddress: string;
   oracleAddress: string;
+  votes: number;
+  confirmed: boolean;
   createdAt: string;
 }
 

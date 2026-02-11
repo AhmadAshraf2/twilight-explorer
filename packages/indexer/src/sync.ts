@@ -317,8 +317,15 @@ async function processCustomMessages(
     try {
       // Bridge Module
       if (msgType === MESSAGE_TYPES.CONFIRM_BTC_DEPOSIT) {
-        await db.btcDeposit.create({
-          data: {
+        await db.btcDeposit.upsert({
+          where: {
+            btcHash_twilightDepositAddress: {
+              btcHash: data.btcHash as string,
+              twilightDepositAddress: data.twilightDepositAddress as string,
+            },
+          },
+          update: { votes: { increment: 1 } },
+          create: {
             txHash: txData.hash,
             blockHeight,
             reserveAddress: data.reserveAddress as string,
@@ -327,6 +334,7 @@ async function processCustomMessages(
             btcHash: data.btcHash as string,
             twilightDepositAddress: data.twilightDepositAddress as string,
             oracleAddress: data.oracleAddress as string,
+            votes: 1,
           },
         });
         indexerEvents.emit('deposit:new', data);

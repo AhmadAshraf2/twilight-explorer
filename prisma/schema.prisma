@@ -99,6 +99,7 @@ model BtcDeposit {
   btcHash               String
   twilightDepositAddress String
   oracleAddress         String
+  votes                 Int       @default(1)
   confirmed             Boolean   @default(true)
   createdAt             DateTime  @default(now())
 

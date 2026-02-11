@@ -240,6 +240,8 @@ export default function DepositsPage() {
                   <tr>
                     <th><SortHeader field="id">ID</SortHeader></th>
                     <th><SortHeader field="amount">Amount</SortHeader></th>
+                    <th>Status</th>
+                    <th>Votes</th>
                     <th>Twilight Address</th>
                     <th>Reserve Address</th>
                     <th>Twilight TX</th>
@@ -258,6 +260,20 @@ export default function DepositsPage() {
                         <span className="text-accent-green font-medium">
                           {formatSatoshis(deposit.depositAmount)}
                         </span>
+                      </td>
+                      <td>
+                        {deposit.votes >= 5 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-green/10 text-accent-green border border-accent-green/20">
+                            Confirmed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-yellow/10 text-accent-yellow border border-accent-yellow/20">
+                            Pending ({deposit.votes}/5)
+                          </span>
+                        )}
+                      </td>
+                      <td className="font-mono text-sm text-text-secondary">
+                        {deposit.votes}
                       </td>
                       <td>
                         <div className="flex items-center gap-1">

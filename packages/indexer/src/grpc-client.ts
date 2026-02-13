@@ -174,7 +174,7 @@ function transformBlockResponse(grpcResp: any): Block {
         },
         chain_id: header?.chainId || '',
         height: header?.height || '0',
-        time: header?.time ? new Date(header.time.seconds * 1000 + header.time.nanos / 1e6).toISOString() : new Date().toISOString(),
+        time: header?.time ? new Date(Number(header.time.seconds) * 1000 + (header.time.nanos || 0) / 1e6).toISOString() : new Date().toISOString(),
         last_block_id: {
           hash: bytesToHex(header?.lastBlockId?.hash),
           part_set_header: {
@@ -214,7 +214,7 @@ function transformBlockResponse(grpcResp: any): Block {
           block_id_flag: sig.blockIdFlag?.toString() || '0',
           validator_address: bytesToHex(sig.validatorAddress),
           timestamp: sig.timestamp
-            ? new Date(sig.timestamp.seconds * 1000 + sig.timestamp.nanos / 1e6).toISOString()
+            ? new Date(Number(sig.timestamp.seconds) * 1000 + (sig.timestamp.nanos || 0) / 1e6).toISOString()
             : '',
           signature: sig.signature ? Buffer.from(sig.signature).toString('base64') : '',
         })),

@@ -16,9 +16,9 @@ export function Footer() {
         }}
       />
 
-      {/* Left Technical Element - absolute positioned at screen edge */}
+      {/* Left Technical Element - hidden on tablet/mobile to avoid overlap */}
       <div 
-        className="absolute left-20 hidden sm:block"
+        className="absolute left-20 hidden lg:block"
         style={{ 
           width: '15px', 
           height: '15px',
@@ -60,9 +60,9 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Right Technical Element - absolute positioned at screen edge */}
+      {/* Right Technical Element - hidden on tablet/mobile to avoid overlap */}
       <div 
-        className="absolute right-20 hidden sm:block"
+        className="absolute right-20 hidden lg:block"
         style={{ 
           width: '15px', 
           height: '15px',

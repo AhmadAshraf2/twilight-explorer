@@ -54,7 +54,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="p-1 hover:bg-background-tertiary/30 rounded-[3.5px] transition-colors"
+      className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 hover:bg-background-tertiary/30 rounded-[3.5px] transition-colors"
       title="Copy"
     >
       {copied ? <Check className="w-3 h-3 text-accent-green" /> : <Copy className="w-3 h-3 text-text-muted hover:text-white" />}
@@ -267,7 +267,50 @@ export default function WithdrawalsPage() {
           <LoadingTable rows={10} />
         ) : sortedWithdrawals.length ? (
           <>
-            <div className="table-container">
+            {/* Mobile: card layout */}
+            <div className="md:hidden space-y-3">
+              {sortedWithdrawals.map((withdrawal) => (
+                <Link
+                  key={withdrawal.id}
+                  href={`/withdrawals/${withdrawal.id}`}
+                  className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-accent-red font-medium">
+                      {formatSatoshis(withdrawal.withdrawAmount)}
+                    </span>
+                    {withdrawal.isConfirmed ? (
+                      <span className="badge badge-success flex items-center gap-1 w-fit">
+                        <CheckCircle className="w-3 h-3" />
+                        Confirmed
+                      </span>
+                    ) : (
+                      <span className="badge badge-warning flex items-center gap-1 w-fit">
+                        <XCircle className="w-3 h-3" />
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary">
+                    <Link
+                      href={`/blocks/${withdrawal.blockHeight}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-primary-light"
+                    >
+                      Block #{withdrawal.blockHeight.toLocaleString()}
+                    </Link>
+                    <span>
+                      {formatDistanceToNow(new Date(withdrawal.createdAt), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-primary-light text-sm font-medium">
+                    View details →
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden md:block table-container">
               <table>
                 <thead>
                   <tr>

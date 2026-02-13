@@ -25,7 +25,8 @@ export function HeroPanel({
       }}
     >
       {/* ============ BACKGROUND LAYERS (match reference) ============ */}
-      <div className="absolute inset-0 overflow-hidden">
+      {/* Desktop/tablet only: glowing gradients - hidden on mobile to avoid overwhelming small screens */}
+      <div className="absolute inset-0 overflow-hidden hidden md:block">
         {/* Orange gradients (layer 1) */}
         <img
           src="/orange_gradients.svg"
@@ -74,18 +75,18 @@ export function HeroPanel({
               'linear-gradient(90deg, #0E0E10 0%, #0E0E10 35%, rgba(14, 14, 16, 0) 100%)',
           }}
         />
-
-        {/* Hero-only grain */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            opacity: 0.06,
-            mixBlendMode: 'overlay',
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")",
-          }}
-        />
       </div>
+
+      {/* Hero-only grain - always visible */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          opacity: 0.06,
+          mixBlendMode: 'overlay',
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")",
+        }}
+      />
 
       {/* ============ CONTENT (smaller + reference type metrics) ============ */}
       <div className="relative z-10 px-6 py-3 sm:px-8 sm:py-4">
@@ -99,16 +100,13 @@ export function HeroPanel({
                 Explorer Live
               </span>
             </div> 
-            {/* Headline: lighter + tighter like reference */}
+            {/* Headline: responsive - smaller on mobile, desktop unchanged */}
             <h1
+              className="text-[28px] leading-[32px] sm:text-[36px] sm:leading-[40px] lg:text-[44px] lg:leading-[48px] mt-[14px] text-white"
               style={{
                 fontFamily: 'var(--font-serif)',
                 fontWeight: 400,
-                fontSize: '44px',
-                lineHeight: '48px',
                 letterSpacing: '-1.05px',
-                color: '#FFFFFF',
-                marginTop: '14px',
                 transform: 'scaleX(0.85)',
                 transformOrigin: 'left',
               }}

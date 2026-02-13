@@ -212,45 +212,70 @@ export default function Dashboard() {
             {blocksLoading ? (
               <LoadingTable rows={3} />
             ) : recentBlocks.length ? (
-              <div className="table-container">
-                <table>
-                  <thead>
-  <tr>
-    <th>Height</th>
-    <th>Txns</th>
-    <th>Proposer</th>
-    <th>Hash</th>
-    <th>Age</th>
-  </tr>
-</thead>
-<tbody>
-  {recentBlocks.map((block) => (
-    <tr key={block.height}>
-      <td>
-        <Link href={`/blocks/${block.height}`} className="font-medium">
-          #{block.height.toLocaleString()}
-        </Link>
-      </td>
-      <td>
-        <span className="badge badge-info">{block.txCount}</span>
-      </td>
-      <td className="text-text-secondary font-mono text-sm">
-        {block.proposer ? `${block.proposer.substring(0, 10)}…${block.proposer.substring(block.proposer.length - 6)}` : '—'}
-      </td>
-      <td className="text-text-secondary font-mono text-sm">
-        {block.hash.substring(0, 10)}…{block.hash.substring(block.hash.length - 6)}
-      </td>
-      <td>
-        <div className="flex items-center gap-1 text-text-secondary text-sm">
-          <Clock className="w-3 h-3" />
-          {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
-        </div>
-      </td>
-    </tr>
-  ))}
-</tbody>
-                </table>
-              </div>
+              <>
+                {/* Mobile: card layout */}
+                <div className="md:hidden space-y-3">
+                  {recentBlocks.map((block) => (
+                    <Link
+                      key={block.height}
+                      href={`/blocks/${block.height}`}
+                      className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-white">#{block.height.toLocaleString()}</span>
+                        <span className="badge badge-info">{block.txCount} txns</span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary text-sm">
+                        <span className="font-mono">{block.hash.substring(0, 10)}…{block.hash.substring(block.hash.length - 6)}</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {/* Desktop: table */}
+                <div className="hidden md:block table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Height</th>
+                        <th>Txns</th>
+                        <th>Proposer</th>
+                        <th>Hash</th>
+                        <th>Age</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentBlocks.map((block) => (
+                        <tr key={block.height}>
+                          <td>
+                            <Link href={`/blocks/${block.height}`} className="font-medium">
+                              #{block.height.toLocaleString()}
+                            </Link>
+                          </td>
+                          <td>
+                            <span className="badge badge-info">{block.txCount}</span>
+                          </td>
+                          <td className="text-text-secondary font-mono text-sm">
+                            {block.proposer ? `${block.proposer.substring(0, 10)}…${block.proposer.substring(block.proposer.length - 6)}` : '—'}
+                          </td>
+                          <td className="text-text-secondary font-mono text-sm">
+                            {block.hash.substring(0, 10)}…{block.hash.substring(block.hash.length - 6)}
+                          </td>
+                          <td>
+                            <div className="flex items-center gap-1 text-text-secondary text-sm">
+                              <Clock className="w-3 h-3" />
+                              {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               <div className="text-center text-text-secondary py-8">No blocks found</div>
             )}
@@ -268,50 +293,84 @@ export default function Dashboard() {
             {txsLoading ? (
               <LoadingTable rows={3} />
             ) : recentTxs.length ? (
-              <div className="table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Hash</th>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentTxs.map((tx) => (
-                      <tr key={tx.hash}>
-                        <td>
-                          <Link href={`/txs/${tx.hash}`} className="font-mono text-sm">
-                            {tx.hash.substring(0, 12)}...{tx.hash.substring(tx.hash.length - 6)}
-                          </Link>
-                        </td>
-                        <td>
-                          <span className="badge badge-primary">
-                            {tx.type.split('.').pop()?.replace('Msg', '')}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={tx.status === 'success' ? 'badge badge-success' : 'badge badge-error'}>
-                            {tx.status === 'success' ? (
-                              <CheckCircle className="w-3 h-3" />
-                            ) : (
-                              <XCircle className="w-3 h-3" />
-                            )}
-                            {tx.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-1 text-text-secondary text-sm">
-                            <Clock className="w-3 h-3" />
-                            {formatDistanceToNow(new Date(tx.blockTime), { addSuffix: true })}
-                          </div>
-                        </td>
+              <>
+                {/* Mobile: card layout */}
+                <div className="md:hidden space-y-3">
+                  {recentTxs.map((tx) => (
+                    <Link
+                      key={tx.hash}
+                      href={`/txs/${tx.hash}`}
+                      className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                    >
+                      <div className="font-mono text-sm text-primary-light truncate">
+                        {tx.hash.substring(0, 12)}...{tx.hash.substring(tx.hash.length - 6)}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="badge badge-primary">
+                          {tx.type.split('.').pop()?.replace('Msg', '')}
+                        </span>
+                        <span className={tx.status === 'success' ? 'badge badge-success' : 'badge badge-error'}>
+                          {tx.status === 'success' ? (
+                            <CheckCircle className="w-3 h-3" />
+                          ) : (
+                            <XCircle className="w-3 h-3" />
+                          )}
+                          {tx.status}
+                        </span>
+                        <span className="flex items-center gap-1 text-text-secondary text-sm">
+                          <Clock className="w-3 h-3" />
+                          {formatDistanceToNow(new Date(tx.blockTime), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {/* Desktop: table */}
+                <div className="hidden md:block table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Hash</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Time</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {recentTxs.map((tx) => (
+                        <tr key={tx.hash}>
+                          <td>
+                            <Link href={`/txs/${tx.hash}`} className="font-mono text-sm">
+                              {tx.hash.substring(0, 12)}...{tx.hash.substring(tx.hash.length - 6)}
+                            </Link>
+                          </td>
+                          <td>
+                            <span className="badge badge-primary">
+                              {tx.type.split('.').pop()?.replace('Msg', '')}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={tx.status === 'success' ? 'badge badge-success' : 'badge badge-error'}>
+                              {tx.status === 'success' ? (
+                                <CheckCircle className="w-3 h-3" />
+                              ) : (
+                                <XCircle className="w-3 h-3" />
+                              )}
+                              {tx.status}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="flex items-center gap-1 text-text-secondary text-sm">
+                              <Clock className="w-3 h-3" />
+                              {formatDistanceToNow(new Date(tx.blockTime), { addSuffix: true })}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               <div className="text-center text-text-secondary py-8">No transactions found</div>
             )}

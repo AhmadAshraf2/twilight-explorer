@@ -47,60 +47,88 @@ export default function BlocksPage() {
         {isLoading ? (
           <LoadingTable rows={10} />
         ) : data?.data?.length ? (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Height</th>
-                  <th>Proposer</th>
-                  <th>Hash</th>
-                  <th>Txs</th>
-                  <th>Gas Used</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.data.map((block) => (
-                  <tr key={block.height}>
-                    <td>
-                      <Link href={`/blocks/${block.height}`} className="font-medium">
-                        #{block.height.toLocaleString()}
-                      </Link>
-                    </td>
-                    <td>
-                      {block.proposerOperator ? (
-                        <Link
-                          href={`/validators/${block.proposerOperator}`}
-                          className="text-primary-light hover:text-primary text-sm"
-                        >
-                          {block.proposerMoniker || 'Unknown'}
-                        </Link>
-                      ) : (
-                        <span className="text-text-muted text-sm">—</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className="font-mono text-text-secondary text-sm">
-                        {block.hash.substring(0, 16)}...
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-info">{block.txCount}</span>
-                    </td>
-                    <td className="text-text-secondary">
-                      {parseInt(block.gasUsed).toLocaleString()}
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1 text-text-secondary text-sm">
+          <>
+            {/* Mobile: card layout */}
+            <div className="md:hidden space-y-3">
+              {data.data.map((block) => (
+                <Link
+                  key={block.height}
+                  href={`/blocks/${block.height}`}
+                  className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-white">#{block.height.toLocaleString()}</span>
+                    <span className="badge badge-info">{block.txCount} txns</span>
+                  </div>
+                  <div className="mt-2 space-y-1 text-sm text-text-secondary">
+                    <div className="font-mono truncate">{block.hash.substring(0, 16)}...</div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span>{parseInt(block.gasUsed).toLocaleString()} gas</span>
+                      <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
-                      </div>
-                    </td>
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden md:block table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Height</th>
+                    <th>Proposer</th>
+                    <th>Hash</th>
+                    <th>Txs</th>
+                    <th>Gas Used</th>
+                    <th>Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {data.data.map((block) => (
+                    <tr key={block.height}>
+                      <td>
+                        <Link href={`/blocks/${block.height}`} className="font-medium">
+                          #{block.height.toLocaleString()}
+                        </Link>
+                      </td>
+                      <td>
+                        {block.proposerOperator ? (
+                          <Link
+                            href={`/validators/${block.proposerOperator}`}
+                            className="text-primary-light hover:text-primary text-sm"
+                          >
+                            {block.proposerMoniker || 'Unknown'}
+                          </Link>
+                        ) : (
+                          <span className="text-text-muted text-sm">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="font-mono text-text-secondary text-sm">
+                          {block.hash.substring(0, 16)}...
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge badge-info">{block.txCount}</span>
+                      </td>
+                      <td className="text-text-secondary">
+                        {parseInt(block.gasUsed).toLocaleString()}
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1 text-text-secondary text-sm">
+                          <Clock className="w-3 h-3" />
+                          {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <div className="text-center text-text-secondary py-10">No blocks found</div>
         )}

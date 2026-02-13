@@ -274,22 +274,24 @@ useEffect(() => {
   </div>
 )}
 
-      {/* Mobile Drawer */}
+      {/* Mobile Menu - full-screen overlay */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[60]">
-          {/* Overlay */}
-          <div
-            className="absolute inset-0 bg-black/50 z-10"
-            onClick={() => {
-              setMobileMenuOpen(false);
-              setMobileOpenGroup(null);
-            }}
-            aria-hidden="true"
-          />
+        <div
+          className="lg:hidden fixed inset-0 z-[60] flex items-start justify-center pt-20 pb-8 px-4"
+          onClick={() => {
+            setMobileMenuOpen(false);
+            setMobileOpenGroup(null);
+          }}
+        >
+          {/* Semi-transparent backdrop - click anywhere to close */}
+          <div className="absolute inset-0 bg-black/60" />
 
-          {/* Drawer panel - above overlay */}
-          <div className="absolute right-0 top-0 h-full w-[320px] min-w-[280px] max-w-[85vw] bg-background-secondary border-l border-white/10 shadow-2xl z-20 flex flex-col">
-            <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
+          {/* Menu panel - centered, click inside does not close */}
+          <div
+            className="relative w-full max-w-md max-h-[calc(100vh-8rem)] overflow-y-auto rounded-[14px] border border-white/10 bg-background-secondary shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-4 border-b border-white/5 bg-background-secondary rounded-t-[14px]">
               <Link
                 href="/"
                 className="flex items-center gap-2"

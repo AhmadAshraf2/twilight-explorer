@@ -441,7 +441,7 @@ export class TwilightGrpcClient {
       this.txService,
       this.txService.getTxsEvent,
       {
-        events: [`tx.height='${height}'`],
+        events: [`tx.height=${height}`],
         pagination: { key: Buffer.alloc(0), offset: '0', limit: '100', countTotal: true },
         orderBy: 0, // ORDER_BY_UNSPECIFIED
       },

@@ -77,8 +77,17 @@ async function processBlock(height: number): Promise<void> {
     try {
       const txData = await grpcClient.getTxsByHeight(height);
       txResponses = txData.tx_responses || [];
-    } catch (err) {
-      // No transactions in this block (404 or empty)
+    } catch (err: any) {
+      // Log the error - don't silently swallow gRPC errors
+      const isNotFound = err?.code === 5; // gRPC NOT_FOUND
+      if (!isNotFound) {
+        logger.warn({
+          height,
+          errorMessage: err?.message || String(err),
+          errorCode: err?.code,
+          errorDetails: err?.details,
+        }, 'Failed to fetch transactions for block');
+      }
       txResponses = [];
     }
 

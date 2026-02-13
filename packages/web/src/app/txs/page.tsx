@@ -138,69 +138,120 @@ export default function TransactionsPage() {
         {isLoading ? (
           <LoadingTable rows={10} />
         ) : data?.data?.length ? (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Hash</th>
-                  <th>Block</th>
-                  <th>Type</th>
-                  <th>ZKOS Type</th>
-                  <th>Status</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.data.map((tx) => (
-                  <tr key={tx.hash}>
-                    <td>
-                      <Link href={`/txs/${tx.hash}`} className="font-mono text-sm">
-                        {tx.hash.substring(0, 16)}...
-                      </Link>
-                    </td>
-                    <td>
-                      <Link href={`/blocks/${tx.blockHeight}`} className="text-text-secondary hover:text-primary-light">
-                        #{tx.blockHeight.toLocaleString()}
-                      </Link>
-                    </td>
-                    <td>
-                      <span className="badge badge-primary">
-                        {tx.type.split('.').pop()?.replace('Msg', '')}
+          <>
+            {/* Mobile: card layout */}
+            <div className="md:hidden space-y-3">
+              {data.data.map((tx) => (
+                <Link
+                  key={tx.hash}
+                  href={`/txs/${tx.hash}`}
+                  className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                >
+                  <div className="font-mono text-sm text-primary-light truncate">
+                    {tx.hash.substring(0, 16)}...
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <Link
+                      href={`/blocks/${tx.blockHeight}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-text-secondary hover:text-primary-light text-sm"
+                    >
+                      #{tx.blockHeight.toLocaleString()}
+                    </Link>
+                    <span className="badge badge-primary">
+                      {tx.type.split('.').pop()?.replace('Msg', '')}
+                    </span>
+                    {tx.programType && (
+                      <span className="badge bg-primary/20 text-primary-light text-xs">
+                        {tx.programType === 'SettleTraderOrderNegativeMarginDifference' ? 'SettleTraderOrder' : tx.programType}
                       </span>
-                    </td>
-                    <td>
-                      {tx.programType ? (
-                        <span className="badge bg-primary/20 text-primary-light">{tx.programType === 'SettleTraderOrderNegativeMarginDifference' ? 'SettleTraderOrder' : tx.programType}</span>
-                      ) : (
-                        <span className="text-text-secondary">-</span>
+                    )}
+                    <span
+                      className={clsx(
+                        'badge flex items-center gap-1',
+                        tx.status === 'success' ? 'badge-success' : 'badge-error'
                       )}
-                    </td>
-                    <td>
-                      <span
-                        className={clsx(
-                          'badge flex items-center gap-1',
-                          tx.status === 'success' ? 'badge-success' : 'badge-error'
-                        )}
-                      >
-                        {tx.status === 'success' ? (
-                          <CheckCircle className="w-3 h-3" />
-                        ) : (
-                          <XCircle className="w-3 h-3" />
-                        )}
-                        {tx.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1 text-text-secondary text-sm">
-                        <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(tx.blockTime), { addSuffix: true })}
-                      </div>
-                    </td>
+                    >
+                      {tx.status === 'success' ? (
+                        <CheckCircle className="w-3 h-3" />
+                      ) : (
+                        <XCircle className="w-3 h-3" />
+                      )}
+                      {tx.status}
+                    </span>
+                    <span className="flex items-center gap-1 text-text-secondary text-sm">
+                      <Clock className="w-3 h-3" />
+                      {formatDistanceToNow(new Date(tx.blockTime), { addSuffix: true })}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden md:block table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hash</th>
+                    <th>Block</th>
+                    <th>Type</th>
+                    <th>ZKOS Type</th>
+                    <th>Status</th>
+                    <th>Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {data.data.map((tx) => (
+                    <tr key={tx.hash}>
+                      <td>
+                        <Link href={`/txs/${tx.hash}`} className="font-mono text-sm">
+                          {tx.hash.substring(0, 16)}...
+                        </Link>
+                      </td>
+                      <td>
+                        <Link href={`/blocks/${tx.blockHeight}`} className="text-text-secondary hover:text-primary-light">
+                          #{tx.blockHeight.toLocaleString()}
+                        </Link>
+                      </td>
+                      <td>
+                        <span className="badge badge-primary">
+                          {tx.type.split('.').pop()?.replace('Msg', '')}
+                        </span>
+                      </td>
+                      <td>
+                        {tx.programType ? (
+                          <span className="badge bg-primary/20 text-primary-light">{tx.programType === 'SettleTraderOrderNegativeMarginDifference' ? 'SettleTraderOrder' : tx.programType}</span>
+                        ) : (
+                          <span className="text-text-secondary">-</span>
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={clsx(
+                            'badge flex items-center gap-1',
+                            tx.status === 'success' ? 'badge-success' : 'badge-error'
+                          )}
+                        >
+                          {tx.status === 'success' ? (
+                            <CheckCircle className="w-3 h-3" />
+                          ) : (
+                            <XCircle className="w-3 h-3" />
+                          )}
+                          {tx.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1 text-text-secondary text-sm">
+                          <Clock className="w-3 h-3" />
+                          {formatDistanceToNow(new Date(tx.blockTime), { addSuffix: true })}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <div className="text-center text-text-secondary py-10">
             No transactions found for the selected filters

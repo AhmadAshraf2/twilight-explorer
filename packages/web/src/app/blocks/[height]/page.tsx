@@ -133,52 +133,90 @@ export default function BlockDetailPage() {
             </div>
 
             {(block as any).transactions && (block as any).transactions.length > 0 ? (
-              <div className="table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Hash</th>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Gas Used</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(block as any).transactions.map((tx: any) => (
-                      <tr key={tx.hash}>
-                        <td>
-                          <Link href={`/txs/${tx.hash}`} className="font-mono text-sm">
-                            {tx.hash.substring(0, 16)}...
-                          </Link>
-                        </td>
-                        <td>
-                          <span className="badge badge-primary">
-                            {tx.type.split('.').pop()?.replace('Msg', '')}
-                          </span>
-                        </td>
-                        <td>
-                          <span
-                            className={clsx(
-                              'badge',
-                              tx.status === 'success' ? 'badge-success' : 'badge-error'
-                            )}
-                          >
-                            {tx.status === 'success' ? (
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                            ) : (
-                              <XCircle className="w-3 h-3 mr-1" />
-                            )}
-                            {tx.status}
-                          </span>
-                        </td>
-                        <td className="text-text-secondary">
-                          {parseInt(tx.gasUsed).toLocaleString()}
-                        </td>
+              <>
+                {/* Mobile: card layout */}
+                <div className="md:hidden space-y-3">
+                  {(block as any).transactions.map((tx: any) => (
+                    <Link
+                      key={tx.hash}
+                      href={`/txs/${tx.hash}`}
+                      className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                    >
+                      <div className="font-mono text-sm text-primary-light truncate">
+                        {tx.hash.substring(0, 16)}...
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="badge badge-primary">
+                          {tx.type.split('.').pop()?.replace('Msg', '')}
+                        </span>
+                        <span
+                          className={clsx(
+                            'badge',
+                            tx.status === 'success' ? 'badge-success' : 'badge-error'
+                          )}
+                        >
+                          {tx.status === 'success' ? (
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                          ) : (
+                            <XCircle className="w-3 h-3 mr-1" />
+                          )}
+                          {tx.status}
+                        </span>
+                        <span className="text-text-secondary text-sm">
+                          {parseInt(tx.gasUsed).toLocaleString()} gas
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {/* Desktop: table */}
+                <div className="hidden md:block table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Hash</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Gas Used</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {(block as any).transactions.map((tx: any) => (
+                        <tr key={tx.hash}>
+                          <td>
+                            <Link href={`/txs/${tx.hash}`} className="font-mono text-sm">
+                              {tx.hash.substring(0, 16)}...
+                            </Link>
+                          </td>
+                          <td>
+                            <span className="badge badge-primary">
+                              {tx.type.split('.').pop()?.replace('Msg', '')}
+                            </span>
+                          </td>
+                          <td>
+                            <span
+                              className={clsx(
+                                'badge',
+                                tx.status === 'success' ? 'badge-success' : 'badge-error'
+                              )}
+                            >
+                              {tx.status === 'success' ? (
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                              ) : (
+                                <XCircle className="w-3 h-3 mr-1" />
+                              )}
+                              {tx.status}
+                            </span>
+                          </td>
+                          <td className="text-text-secondary">
+                            {parseInt(tx.gasUsed).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               <div className="text-center text-text-secondary py-10">
                 No transactions found for this block

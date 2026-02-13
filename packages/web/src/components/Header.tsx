@@ -184,9 +184,9 @@ useEffect(() => {
         height: '72px'
       }}
     >
-      {/* Left Technical Element - absolute positioned at screen edge (full width) */}
+      {/* Left Technical Element - hidden on tablet/mobile to avoid overlap */}
       <div 
-        className="absolute left-20 hidden sm:block"
+        className="absolute left-20 hidden lg:block"
         style={{ 
           width: '15px', 
           height: '15px',
@@ -198,18 +198,12 @@ useEffect(() => {
 
       {/* Main nav content - centered, constrained to 1432px, padding matches main content */}
       <nav className="relative max-w-[1432px] mx-auto px-4 sm:px-6 lg:px-[156px]">
-        {/* Logo - positioned relative to nav container (constrained) */}
+        {/* Logo - flex on tablet/mobile, absolute on desktop to preserve layout */}
         <div 
-          className="absolute hidden sm:block"
-          style={{ 
-            width: '107.6px',
-            height: '24px',
-            left: '181px',
-            top: 'calc(50% - 24px/2)'
-          }}
+          className="absolute hidden sm:block lg:left-[181px] left-6 top-1/2 -translate-y-1/2 w-[107.6px] h-6"
         >
           <Link href="/" className="block w-full h-full">
-            <img src="/logo.svg" alt="Twilight" className="w-full h-full" />
+            <img src="/logo.svg" alt="Twilight" className="w-full h-full object-contain object-left" />
           </Link>
         </div>
 
@@ -232,7 +226,7 @@ useEffect(() => {
           <div className="flex items-center gap-2 ml-auto">
             <button
               type="button"
-              className="p-2.5 rounded-full border border-card-border/60 bg-black/30 text-white/90 hover:text-white hover:bg-background-tertiary/30 transition-colors duration-150"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-full border border-card-border/60 bg-black/30 text-white/90 hover:text-white hover:bg-background-tertiary/30 transition-colors duration-150"
               aria-label={searchOpen ? 'Close search' : 'Open search'}
               onClick={() => setSearchOpen(true)}
             >
@@ -240,7 +234,7 @@ useEffect(() => {
             </button>
 
             <button
-              className="lg:hidden p-2 text-text-secondary hover:text-white"
+              className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-text-secondary hover:text-white"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
             >
@@ -250,9 +244,9 @@ useEffect(() => {
         </div>
       </nav>
 
-      {/* Right Technical Element - absolute positioned at screen edge */}
+      {/* Right Technical Element - hidden on tablet/mobile to avoid overlap */}
       <div 
-        className="absolute right-20 hidden sm:block"
+        className="absolute right-20 hidden lg:block"
         style={{ 
           width: '15px', 
           height: '15px',
@@ -309,7 +303,7 @@ useEffect(() => {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="p-2 text-text-secondary hover:text-white"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-text-secondary hover:text-white"
                   aria-label="Open search"
                   onClick={() => {
                     setMobileMenuOpen(false);
@@ -320,7 +314,7 @@ useEffect(() => {
                   <Search className="w-5 h-5" />
                 </button>
                 <button
-                  className="p-2 text-text-secondary hover:text-white"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-text-secondary hover:text-white"
                   onClick={() => {
                     setMobileMenuOpen(false);
                     setMobileOpenGroup(null);

@@ -99,16 +99,13 @@ export function HeroPanel({
                 Explorer Live
               </span>
             </div> 
-            {/* Headline: lighter + tighter like reference */}
+            {/* Headline: responsive - smaller on mobile, desktop unchanged */}
             <h1
+              className="text-[28px] leading-[32px] sm:text-[36px] sm:leading-[40px] lg:text-[44px] lg:leading-[48px] mt-[14px] text-white"
               style={{
                 fontFamily: 'var(--font-serif)',
                 fontWeight: 400,
-                fontSize: '44px',
-                lineHeight: '48px',
                 letterSpacing: '-1.05px',
-                color: '#FFFFFF',
-                marginTop: '14px',
                 transform: 'scaleX(0.85)',
                 transformOrigin: 'left',
               }}

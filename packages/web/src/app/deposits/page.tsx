@@ -52,7 +52,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="p-1 hover:bg-background-tertiary/30 rounded-[3.5px] transition-colors"
+      className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 hover:bg-background-tertiary/30 rounded-[3.5px] transition-colors"
       title="Copy"
     >
       {copied ? <Check className="w-3 h-3 text-accent-green" /> : <Copy className="w-3 h-3 text-text-muted hover:text-white" />}
@@ -234,7 +234,48 @@ export default function DepositsPage() {
           <LoadingTable rows={10} />
         ) : sortedDeposits.length ? (
           <>
-            <div className="table-container">
+            {/* Mobile: card layout */}
+            <div className="md:hidden space-y-3">
+              {sortedDeposits.map((deposit) => (
+                <Link
+                  key={deposit.id}
+                  href={`/deposits/${deposit.id}`}
+                  className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-accent-green font-medium">
+                      {formatSatoshis(deposit.depositAmount)}
+                    </span>
+                    {deposit.votes >= 5 ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-green/10 text-accent-green border border-accent-green/20">
+                        Confirmed
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-yellow/10 text-accent-yellow border border-accent-yellow/20">
+                        Pending ({deposit.votes}/5)
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary">
+                    <Link
+                      href={`/blocks/${deposit.blockHeight}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:text-primary-light"
+                    >
+                      Block #{deposit.blockHeight.toLocaleString()}
+                    </Link>
+                    <span>
+                      {formatDistanceToNow(new Date(deposit.createdAt), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-primary-light text-sm font-medium">
+                    View details →
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden md:block table-container">
               <table>
                 <thead>
                   <tr>

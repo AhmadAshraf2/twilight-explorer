@@ -356,7 +356,9 @@ export class TwilightGrpcClient {
   private bank: InstanceType<typeof BankQueryConstructor>;
 
   constructor(grpcUrl: string = config.grpcUrl) {
-    const credentials = grpc.credentials.createInsecure();
+    const credentials = config.grpcTls
+      ? grpc.credentials.createSsl()
+      : grpc.credentials.createInsecure();
 
     const channelOptions: grpc.ChannelOptions = {
       'grpc.keepalive_time_ms': 10000,

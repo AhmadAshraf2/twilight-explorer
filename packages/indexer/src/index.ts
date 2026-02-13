@@ -73,8 +73,12 @@ async function main(): Promise<void> {
       { height: latestBlock.block.header.height, chainId: latestBlock.block.header.chain_id },
       'gRPC connected'
     );
-  } catch (error) {
-    logger.error({ error }, 'Failed to connect to gRPC');
+  } catch (error: any) {
+    logger.error({
+      message: error?.message || String(error),
+      code: error?.code,
+      details: error?.details,
+    }, 'Failed to connect to gRPC');
     process.exit(1);
   }
 

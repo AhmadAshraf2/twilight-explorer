@@ -16,6 +16,7 @@ export const config = {
 
   // Twilight gRPC endpoint
   grpcUrl: process.env.TWILIGHT_GRPC_URL || 'localhost:9090',
+  grpcTls: process.env.TWILIGHT_GRPC_TLS === 'true',
 
   // zkOS Decode API
   zkosDecodeUrl: process.env.ZKOS_DECODE_URL || 'https://indexer.twilight.org',

@@ -198,9 +198,9 @@ useEffect(() => {
 
       {/* Main nav content - centered, constrained to 1432px, padding matches main content */}
       <nav className="relative max-w-[1432px] mx-auto px-4 sm:px-6 lg:px-[156px]">
-        {/* Logo - flex on tablet/mobile, absolute on desktop to preserve layout */}
+        {/* Logo - always visible; positioned for mobile/tablet and desktop */}
         <div 
-          className="absolute hidden sm:block lg:left-[181px] left-6 top-1/2 -translate-y-1/2 w-[107.6px] h-6"
+          className="absolute block lg:left-[181px] left-4 sm:left-6 top-1/2 -translate-y-1/2 w-[90px] sm:w-[107.6px] h-5 sm:h-6"
         >
           <Link href="/" className="block w-full h-full">
             <img src="/logo.svg" alt="Twilight" className="w-full h-full object-contain object-left" />
@@ -276,10 +276,10 @@ useEffect(() => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50">
+        <div className="lg:hidden fixed inset-0 z-[60]">
           {/* Overlay */}
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/50 z-10"
             onClick={() => {
               setMobileMenuOpen(false);
               setMobileOpenGroup(null);
@@ -287,8 +287,8 @@ useEffect(() => {
             aria-hidden="true"
           />
 
-          {/* Drawer panel */}
-          <div className="absolute right-0 top-0 h-full w-[340px] max-w-[85vw] bg-card border-l border-white/5 shadow-card">
+          {/* Drawer panel - above overlay */}
+          <div className="absolute right-0 top-0 h-full w-[320px] min-w-[280px] max-w-[85vw] bg-background-secondary border-l border-white/10 shadow-2xl z-20 flex flex-col">
             <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
               <Link
                 href="/"
@@ -326,41 +326,41 @@ useEffect(() => {
               </div>
             </div>
 
-            <div className="p-4 space-y-2 overflow-y-auto h-[calc(100%-64px)]">
+            <div className="flex-1 overflow-y-auto p-4 space-y-1">
               {navGroups.map((group) => {
                 const active = isGroupActive.get(group.name) || false;
                 const isOpen = mobileOpenGroup === group.name;
                 return (
-                  <div key={group.name} className="space-y-1">
+                  <div key={group.name} className="space-y-0.5">
                     <button
                       type="button"
                       onClick={() => setMobileOpenGroup((prev) => (prev === group.name ? null : group.name))}
                       className={clsx(
-                        'w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                        'w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left',
                         active
                           ? 'bg-primary/20 text-primary-light'
-                          : 'text-text-secondary hover:text-white hover:bg-background-tertiary'
+                          : 'text-white hover:bg-background-tertiary'
                       )}
                       aria-expanded={isOpen}
                     >
                       <span className="flex items-center gap-2">
-                        <group.icon className="w-4 h-4" />
+                        <group.icon className="w-4 h-4 shrink-0" />
                         {group.name}
                       </span>
-                      <ChevronDown className={clsx('w-4 h-4 transition-transform', isOpen && 'rotate-180')} />
+                      <ChevronDown className={clsx('w-4 h-4 shrink-0 transition-transform', isOpen && 'rotate-180')} />
                     </button>
 
                     {isOpen && (
-                      <div className="pl-2">
+                      <div className="pl-4 pr-2 pb-2 space-y-0.5">
                         {group.items.map((child) => {
-                          const isActive = pathname === child.href || pathname.startsWith(`${child.href}/`);
+                          const isChildActive = pathname === child.href || pathname.startsWith(`${child.href}/`);
                           return (
                             <Link
                               key={child.name}
                               href={child.href}
                               className={clsx(
                                 'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                                isActive
+                                isChildActive
                                   ? 'bg-primary/15 text-primary-light'
                                   : 'text-text-secondary hover:text-white hover:bg-background-tertiary'
                               )}
@@ -369,7 +369,7 @@ useEffect(() => {
                                 setMobileOpenGroup(null);
                               }}
                             >
-                              <child.icon className="w-4 h-4" />
+                              <child.icon className="w-4 h-4 shrink-0" />
                               {child.name}
                             </Link>
                           );

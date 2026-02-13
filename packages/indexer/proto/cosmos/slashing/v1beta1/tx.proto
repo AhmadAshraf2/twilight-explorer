@@ -1,0 +1,14 @@
+syntax = "proto3";
+package cosmos.slashing.v1beta1;
+
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/cosmos/cosmos-sdk/x/slashing/types";
+
+// MsgUnjail defines the Msg/Unjail request type.
+message MsgUnjail {
+  option (gogoproto.equal) = false;
+  string validator_addr = 1 [(gogoproto.moretags) = "yaml:\"address\""];
+}
+
+message MsgUnjailResponse {}

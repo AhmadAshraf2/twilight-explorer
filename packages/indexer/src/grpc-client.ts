@@ -56,6 +56,32 @@ import {
   MsgTransferTx,
   MsgMintBurnTradingBtc,
 } from './generated/nyks/zkos/tx.js';
+import {
+  MsgSend,
+  MsgMultiSend,
+} from './generated/cosmos/bank/v1beta1/tx.js';
+import {
+  MsgCreateValidator,
+  MsgEditValidator,
+  MsgDelegate,
+  MsgBeginRedelegate,
+  MsgUndelegate,
+} from './generated/cosmos/staking/v1beta1/tx.js';
+import {
+  MsgSetWithdrawAddress,
+  MsgWithdrawDelegatorReward,
+  MsgWithdrawValidatorCommission,
+  MsgFundCommunityPool,
+} from './generated/cosmos/distribution/v1beta1/tx.js';
+import {
+  MsgSubmitProposal,
+  MsgVote,
+  MsgVoteWeighted,
+  MsgDeposit,
+} from './generated/cosmos/gov/v1beta1/tx.js';
+import {
+  MsgUnjail,
+} from './generated/cosmos/slashing/v1beta1/tx.js';
 
 // Import generated request types
 import type { OrderBy } from './generated/cosmos/tx/v1beta1/service.js';
@@ -99,6 +125,27 @@ const messageDecoders: Record<string, { decode: (input: Uint8Array, length?: num
   // zkOS Module (2 types)
   '/twilightproject.nyks.zkos.MsgTransferTx': MsgTransferTx,
   '/twilightproject.nyks.zkos.MsgMintBurnTradingBtc': MsgMintBurnTradingBtc,
+  // Cosmos SDK standard messages - bank
+  '/cosmos.bank.v1beta1.MsgSend': MsgSend,
+  '/cosmos.bank.v1beta1.MsgMultiSend': MsgMultiSend,
+  // Cosmos SDK standard messages - staking
+  '/cosmos.staking.v1beta1.MsgCreateValidator': MsgCreateValidator,
+  '/cosmos.staking.v1beta1.MsgEditValidator': MsgEditValidator,
+  '/cosmos.staking.v1beta1.MsgDelegate': MsgDelegate,
+  '/cosmos.staking.v1beta1.MsgBeginRedelegate': MsgBeginRedelegate,
+  '/cosmos.staking.v1beta1.MsgUndelegate': MsgUndelegate,
+  // Cosmos SDK standard messages - distribution
+  '/cosmos.distribution.v1beta1.MsgSetWithdrawAddress': MsgSetWithdrawAddress,
+  '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward': MsgWithdrawDelegatorReward,
+  '/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission': MsgWithdrawValidatorCommission,
+  '/cosmos.distribution.v1beta1.MsgFundCommunityPool': MsgFundCommunityPool,
+  // Cosmos SDK standard messages - gov
+  '/cosmos.gov.v1beta1.MsgSubmitProposal': MsgSubmitProposal,
+  '/cosmos.gov.v1beta1.MsgVote': MsgVote,
+  '/cosmos.gov.v1beta1.MsgVoteWeighted': MsgVoteWeighted,
+  '/cosmos.gov.v1beta1.MsgDeposit': MsgDeposit,
+  // Cosmos SDK standard messages - slashing
+  '/cosmos.slashing.v1beta1.MsgUnjail': MsgUnjail,
 };
 
 // ============================================

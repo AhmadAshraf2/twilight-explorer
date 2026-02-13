@@ -9,16 +9,16 @@ interface BlockCardProps {
 
 export function BlockCard({ block }: BlockCardProps) {
   return (
-    <div className="card hover:border-primary/50 transition-colors">
+    <div className="card card-hover rounded-[10.5px]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/20 rounded-lg">
+          <div className="w-10 h-10 rounded-[7px] bg-background-tertiary/30 border border-card-border flex items-center justify-center">
             <Blocks className="w-5 h-5 text-primary-light" />
           </div>
           <div>
             <Link
               href={`/blocks/${block.height}`}
-              className="text-lg font-semibold text-white hover:text-primary-light"
+              className="font-mono text-[12.3px] leading-[18px] text-white hover:text-primary-light"
             >
               #{block.height.toLocaleString()}
             </Link>
@@ -29,7 +29,7 @@ export function BlockCard({ block }: BlockCardProps) {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-white font-medium">
+          <div className="text-white font-medium text-sm">
             {block.txCount} {block.txCount === 1 ? 'tx' : 'txs'}
           </div>
           <div className="text-text-muted text-xs mt-1 font-mono truncate max-w-[120px]">

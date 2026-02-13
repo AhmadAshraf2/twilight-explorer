@@ -27,12 +27,12 @@ export function TxCard({ tx }: TxCardProps) {
   const typeName = formatMessageType(tx.type);
 
   return (
-    <div className="card hover:border-primary/50 transition-colors">
+    <div className="card card-hover rounded-[10.5px]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
             className={clsx(
-              'p-2 rounded-lg',
+              'w-10 h-10 rounded-[7px] border border-card-border flex items-center justify-center',
               module === 'bridge' && 'bg-accent-blue/20',
               module === 'forks' && 'bg-accent-orange/20',
               module === 'volt' && 'bg-accent-yellow/20',

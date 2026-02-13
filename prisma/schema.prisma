@@ -99,6 +99,7 @@ model BtcDeposit {
   btcHash               String
   twilightDepositAddress String
   oracleAddress         String
+  votes                 Int       @default(1)
   confirmed             Boolean   @default(true)
   createdAt             DateTime  @default(now())
 
@@ -123,20 +124,18 @@ model BtcDepositAddress {
 
 model BtcWithdrawal {
   id                    Int       @id @default(autoincrement())
-  txHash                String
-  blockHeight           Int
+  withdrawIdentifier    Int       @unique
   withdrawAddress       String
-  reserveId             BigInt
+  withdrawReserveId     String
   withdrawAmount        BigInt
   twilightAddress       String
-  status                String    @default("pending") // pending, signed, broadcast, confirmed
-  btcTxHash             String?
+  isConfirmed           Boolean   @default(false)
+  blockHeight           Int
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
   @@index([twilightAddress])
-  @@index([status])
-  @@index([reserveId])
+  @@index([isConfirmed])
 }
 
 model Reserve {
@@ -312,6 +311,7 @@ model ZkosTransfer {
   @@index([blockHeight])
   @@index([zkOracleAddress])
   @@index([programType])
+  @@index([txHash])
 }
 
 model ZkosMintBurn {
@@ -328,6 +328,7 @@ model ZkosMintBurn {
   @@index([twilightAddress])
   @@index([mintOrBurn])
   @@index([blockHeight])
+  @@index([txHash])
 }
 
 // ============================================

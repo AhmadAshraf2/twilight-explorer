@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://143.198.60.224:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://explorer.twilight.org';
 
 export interface Pagination {
   page: number;
@@ -17,6 +17,8 @@ export interface Block {
   hash: string;
   timestamp: string;
   proposer: string | null;
+  proposerMoniker: string | null;
+  proposerOperator: string | null;
   txCount: number;
   gasUsed: string;
   gasWanted: string;
@@ -77,6 +79,55 @@ export interface ModuleStats {
   };
 }
 
+export interface NetworkPerformance {
+  averageBlockTime: number;
+  tps: number;
+  blockProductionRate: number;
+  gasUtilization: number;
+  proposerDistribution: {
+    address: string;
+    blocks: number;
+    percentage: number;
+  }[];
+}
+
+export interface ActiveAccounts {
+  active24h: number;
+  active7d: number;
+  active30d: number;
+  newAccounts24h: number;
+  growthRate: number;
+}
+
+export interface BridgeAnalytics {
+  totalVolume: string;
+  depositVolume24h: string;
+  withdrawalVolume24h: string;
+  pendingWithdrawals: number;
+  confirmedWithdrawals: number;
+  averageDepositSize: string;
+  averageWithdrawalSize: string;
+  withdrawalSuccessRate: number;
+}
+
+export interface FragmentHealth {
+  totalFragments: number;
+  activeFragments: number;
+  bootstrappingFragments: number;
+  inactiveFragments: number;
+  averageSignersPerFragment: number;
+  totalSigners: number;
+  fragmentSuccessRate: number;
+  averageFeePool: string;
+  topFragments: {
+    fragmentId: string;
+    judgeAddress: string;
+    feePool: string;
+    signersCount: number;
+    status: string;
+  }[];
+}
+
 export interface Account {
   address: string;
   balance: string;
@@ -95,19 +146,20 @@ export interface BtcDeposit {
   btcHash: string;
   twilightDepositAddress: string;
   oracleAddress: string;
+  votes: number;
+  confirmed: boolean;
   createdAt: string;
 }
 
 export interface BtcWithdrawal {
   id: number;
-  txHash: string;
-  blockHeight: number;
+  withdrawIdentifier: number;
   withdrawAddress: string;
-  reserveId: string;
+  withdrawReserveId: string;
   withdrawAmount: string;
   twilightAddress: string;
-  status: string;
-  btcTxHash: string | null;
+  isConfirmed: boolean;
+  blockHeight: number;
   createdAt: string;
 }
 
@@ -166,6 +218,10 @@ async function fetchApi<T>(endpoint: string): Promise<T> {
 // Stats
 export const getStats = () => fetchApi<Stats>('/api/stats');
 export const getModuleStats = () => fetchApi<ModuleStats>('/api/stats/modules');
+export const getNetworkPerformance = () => fetchApi<NetworkPerformance>('/api/stats/network-performance');
+export const getActiveAccounts = () => fetchApi<ActiveAccounts>('/api/stats/active-accounts');
+export const getBridgeAnalytics = () => fetchApi<BridgeAnalytics>('/api/stats/bridge-analytics');
+export const getFragmentHealth = () => fetchApi<FragmentHealth>('/api/stats/fragment-health');
 
 // Blocks
 export const getBlocks = (page = 1, limit = 20) =>
@@ -226,11 +282,29 @@ export const getAccountTransactions = (address: string, page = 1, limit = 20) =>
   fetchApi<PaginatedResponse<Transaction>>(`/api/accounts/${address}/transactions?page=${page}&limit=${limit}`);
 
 // Twilight-specific
-export const getDeposits = (page = 1, limit = 20) =>
-  fetchApi<PaginatedResponse<BtcDeposit>>(`/api/twilight/deposits?page=${page}&limit=${limit}`);
+export const getDeposits = (page = 1, limit = 20, params?: { search?: string }) => {
+  const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (params?.search?.trim()) qs.set('search', params.search.trim());
+  return fetchApi<PaginatedResponse<BtcDeposit>>(`/api/twilight/deposits?${qs}`);
+};
 
-export const getWithdrawals = (page = 1, limit = 20) =>
-  fetchApi<PaginatedResponse<BtcWithdrawal>>(`/api/twilight/withdrawals?page=${page}&limit=${limit}`);
+export const getDeposit = (id: string) =>
+  fetchApi<BtcDeposit>(`/api/twilight/deposits/${id}`);
+
+export const getWithdrawals = (
+  page = 1,
+  limit = 20,
+  params?: { confirmed?: boolean; search?: string }
+) => {
+  const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (params?.confirmed === true) qs.set('confirmed', 'true');
+  if (params?.confirmed === false) qs.set('confirmed', 'false');
+  if (params?.search?.trim()) qs.set('search', params.search.trim());
+  return fetchApi<PaginatedResponse<BtcWithdrawal>>(`/api/twilight/withdrawals?${qs}`);
+};
+
+export const getWithdrawal = (id: string) =>
+  fetchApi<BtcWithdrawal>(`/api/twilight/withdrawals/${id}`);
 
 export const getReserves = () => fetchApi<any[]>('/api/twilight/reserves');
 
@@ -246,6 +320,27 @@ export const getZkosTransfers = (page = 1, limit = 20) =>
 export const search = (query: string) =>
   fetchApi<any>(`/api/twilight/search?q=${encodeURIComponent(query)}`);
 
+// Delegate keys (Forks)
+export interface DelegateKey {
+  id: number;
+  txHash: string;
+  blockHeight: number;
+  validatorAddress: string;
+  btcOracleAddress: string;
+  btcPublicKey: string;
+  zkOracleAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const getDelegates = () => fetchApi<DelegateKey[]>('/api/twilight/delegates');
+
+// Script address transactions
+export const getTransactionsByScript = (scriptAddress: string, page = 1, limit = 20) =>
+  fetchApi<PaginatedResponse<Transaction> & { scriptAddress: string }>(
+    `/api/txs/script/${scriptAddress}?page=${page}&limit=${limit}`
+  );
+
 // Sweep Addresses from LCD
 export interface SweepAddress {
   btcAddress: string;
@@ -259,12 +354,76 @@ export interface SweepAddressesResponse {
   proposeSweepAddressMsgs: SweepAddress[];
 }
 
-const LCD_URL = 'https://lcd.twilight.org';
+// Sweep addresses (cached via API)
+export const getSweepAddresses = (limit = 100): Promise<SweepAddressesResponse> =>
+  fetchApi<SweepAddressesResponse>(`/api/twilight/sweep-addresses?limit=${limit}`);
 
-export const getSweepAddresses = async (limit = 50): Promise<SweepAddressesResponse> => {
-  const response = await fetch(`${LCD_URL}/twilight-project/nyks/bridge/propose_sweep_addresses_all/${limit}`);
-  if (!response.ok) {
-    throw new Error(`LCD API error: ${response.status}`);
-  }
-  return response.json();
-};
+// Single fragment from LCD (cached via API)
+export const getFragment = (id: string): Promise<FragmentLive> =>
+  fetchApi<FragmentLive>(`/api/twilight/fragments/live/${id}`);
+
+// Validators (Cosmos SDK staking) from LCD
+export interface LcdStakingValidator {
+  operator_address: string;
+  jailed: boolean;
+  status: string; // e.g. "BOND_STATUS_BONDED"
+  tokens: string;
+  description: {
+    moniker: string;
+    identity?: string;
+    website?: string;
+    details?: string;
+  };
+  commission?: {
+    commission_rates?: {
+      rate?: string;
+      max_rate?: string;
+      max_change_rate?: string;
+    };
+  };
+}
+
+export interface LcdValidatorsResponse {
+  validators: LcdStakingValidator[];
+  pagination?: {
+    next_key: string | null;
+    total?: string;
+  };
+}
+
+// Validator block production stats (from DB)
+export interface ValidatorBlockStats {
+  totalBlocks: number;
+  blocks24h: number;
+  blocks7d: number;
+  percentage: number;
+  lastBlock: {
+    height: number;
+    hash: string;
+    timestamp: string;
+  } | null;
+}
+
+// Get validator count (cached via API)
+export async function getValidatorCount(status: string = 'BOND_STATUS_BONDED'): Promise<number> {
+  const response = await fetchApi<{ count: number }>(`/api/validators/count?status=${status}`);
+  return response.count;
+}
+
+// Get validators list (cached via API)
+export async function getValidatorsBasic(
+  limit: number = 100,
+  status: string = 'BOND_STATUS_BONDED'
+): Promise<LcdValidatorsResponse> {
+  return fetchApi<LcdValidatorsResponse>(`/api/validators?status=${status}&limit=${limit}`);
+}
+
+// Get single validator details (cached via API)
+export async function getValidator(address: string): Promise<LcdStakingValidator> {
+  return fetchApi<LcdStakingValidator>(`/api/validators/${address}`);
+}
+
+// Get validator block production stats (from DB, cached via API)
+export async function getValidatorBlockStats(address: string): Promise<ValidatorBlockStats> {
+  return fetchApi<ValidatorBlockStats>(`/api/validators/${address}/blocks`);
+}

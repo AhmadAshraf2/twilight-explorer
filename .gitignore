@@ -41,3 +41,8 @@ prisma/*.db-journal
 
 # Misc
 *.tsbuildinfo
+
+report-*.toml
+
+PRODUCTION_READINESS_REVIEW.md
+PRODUCTION_READINESS_REVIEW.md

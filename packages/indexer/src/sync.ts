@@ -317,8 +317,15 @@ async function processCustomMessages(
     try {
       // Bridge Module
       if (msgType === MESSAGE_TYPES.CONFIRM_BTC_DEPOSIT) {
-        await db.btcDeposit.create({
-          data: {
+        await db.btcDeposit.upsert({
+          where: {
+            btcHash_twilightDepositAddress: {
+              btcHash: data.btcHash as string,
+              twilightDepositAddress: data.twilightDepositAddress as string,
+            },
+          },
+          update: { votes: { increment: 1 } },
+          create: {
             txHash: txData.hash,
             blockHeight,
             reserveAddress: data.reserveAddress as string,
@@ -327,6 +334,7 @@ async function processCustomMessages(
             btcHash: data.btcHash as string,
             twilightDepositAddress: data.twilightDepositAddress as string,
             oracleAddress: data.oracleAddress as string,
+            votes: 1,
           },
         });
         indexerEvents.emit('deposit:new', data);
@@ -351,18 +359,8 @@ async function processCustomMessages(
         });
       }
 
+      // Withdrawals are now synced from LCD endpoint every 20 minutes (see API server)
       if (msgType === MESSAGE_TYPES.WITHDRAW_BTC_REQUEST) {
-        await db.btcWithdrawal.create({
-          data: {
-            txHash: txData.hash,
-            blockHeight,
-            withdrawAddress: data.withdrawAddress as string,
-            reserveId: BigInt(data.reserveId as string),
-            withdrawAmount: BigInt(data.withdrawAmount as string),
-            twilightAddress: data.twilightAddress as string,
-            status: 'pending',
-          },
-        });
         indexerEvents.emit('withdrawal:new', data);
       }
 

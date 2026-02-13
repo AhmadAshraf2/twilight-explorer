@@ -1,10 +1,53 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { getCache, setCache, CACHE_TTL, CACHE_KEYS } from '../cache.js';
+import crypto from 'crypto';
+import { getCache, setCache, withCache, CACHE_TTL, CACHE_KEYS } from '../cache.js';
+import { config } from '../config.js';
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// Build a map of base64 proposer address → { moniker, operatorAddress }
+async function getProposerMap(): Promise<Map<string, { moniker: string; operatorAddress: string }>> {
+  const cacheKey = 'cache:proposer-map:all';
+  const cached = await getCache<Array<[string, { moniker: string; operatorAddress: string }]>>(cacheKey);
+  if (cached) return new Map(cached);
+
+  try {
+    const url = new URL(`${config.lcdUrl}/cosmos/staking/v1beta1/validators`);
+    url.searchParams.set('pagination.limit', '200');
+
+    const response = await fetch(url.toString());
+    if (!response.ok) return new Map();
+
+    const data = (await response.json()) as {
+      validators: Array<{
+        operator_address: string;
+        description: { moniker: string };
+        consensus_pubkey?: { key: string };
+      }>;
+    };
+
+    const map = new Map<string, { moniker: string; operatorAddress: string }>();
+    for (const v of data.validators) {
+      if (!v.consensus_pubkey?.key) continue;
+      const pubkeyBytes = Buffer.from(v.consensus_pubkey.key, 'base64');
+      const sha256Hash = crypto.createHash('sha256').update(pubkeyBytes).digest();
+      const proposerAddr = sha256Hash.subarray(0, 20).toString('base64');
+      map.set(proposerAddr, {
+        moniker: v.description.moniker,
+        operatorAddress: v.operator_address,
+      });
+    }
+
+    // Cache as array of entries for 10 minutes
+    setCache(cacheKey, Array.from(map.entries()), CACHE_TTL.VALIDATORS).catch(() => {});
+    return map;
+  } catch {
+    return new Map();
+  }
+}
 
 // Validation schemas
 const paginationSchema = z.object({
@@ -47,12 +90,20 @@ router.get('/', async (req: Request, res: Response) => {
       prisma.block.count(),
     ]);
 
+    // Enrich with proposer moniker
+    const proposerMap = await getProposerMap();
+
     // Convert BigInt to string for JSON serialization
-    const serializedBlocks = blocks.map((block) => ({
-      ...block,
-      gasUsed: block.gasUsed.toString(),
-      gasWanted: block.gasWanted.toString(),
-    }));
+    const serializedBlocks = blocks.map((block) => {
+      const proposerInfo = block.proposer ? proposerMap.get(block.proposer) : undefined;
+      return {
+        ...block,
+        gasUsed: block.gasUsed.toString(),
+        gasWanted: block.gasWanted.toString(),
+        proposerMoniker: proposerInfo?.moniker ?? null,
+        proposerOperator: proposerInfo?.operatorAddress ?? null,
+      };
+    });
 
     const response = {
       data: serializedBlocks,
@@ -100,10 +151,15 @@ router.get('/latest', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'No blocks found' });
     }
 
+    const pMap = await getProposerMap();
+    const pInfo = block.proposer ? pMap.get(block.proposer) : undefined;
+
     res.json({
       ...block,
       gasUsed: block.gasUsed.toString(),
       gasWanted: block.gasWanted.toString(),
+      proposerMoniker: pInfo?.moniker ?? null,
+      proposerOperator: pInfo?.operatorAddress ?? null,
       transactions: block.transactions.map((tx) => ({
         ...tx,
         gasUsed: tx.gasUsed.toString(),
@@ -150,10 +206,15 @@ router.get('/:height', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Block not found' });
     }
 
+    const pMap2 = await getProposerMap();
+    const pInfo2 = block.proposer ? pMap2.get(block.proposer) : undefined;
+
     res.json({
       ...block,
       gasUsed: block.gasUsed.toString(),
       gasWanted: block.gasWanted.toString(),
+      proposerMoniker: pInfo2?.moniker ?? null,
+      proposerOperator: pInfo2?.operatorAddress ?? null,
       transactions: block.transactions.map((tx) => ({
         ...tx,
         gasUsed: tx.gasUsed.toString(),

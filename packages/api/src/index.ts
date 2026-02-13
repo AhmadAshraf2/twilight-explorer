@@ -4,11 +4,14 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import pino from 'pino';
+import axios from 'axios';
 import { createServer } from 'http';
 import { PrismaClient } from '@prisma/client';
 
+import swaggerUi from 'swagger-ui-express';
 import { config } from './config.js';
 import { createWebSocketServer } from './websocket.js';
+import { swaggerSpec } from './swagger.js';
 
 // Import routes
 import blocksRouter from './routes/blocks.js';
@@ -16,6 +19,8 @@ import transactionsRouter from './routes/transactions.js';
 import accountsRouter from './routes/accounts.js';
 import statsRouter from './routes/stats.js';
 import twilightRouter from './routes/twilight.js';
+import validatorsRouter from './routes/validators.js';
+import bitcoinRouter from './routes/bitcoin.js';
 
 const logger = pino({
   transport: {
@@ -30,6 +35,9 @@ const logger = pino({
 
 const app = express();
 const prisma = new PrismaClient();
+
+// Trust proxy (behind Nginx)
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(helmet());
@@ -69,12 +77,21 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Swagger API docs
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Twilight Explorer API Docs',
+  customCss: '.swagger-ui .topbar { display: none }',
+}));
+app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
+
 // API Routes
 app.use('/api/blocks', blocksRouter);
 app.use('/api/txs', transactionsRouter);
 app.use('/api/accounts', accountsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/twilight', twilightRouter);
+app.use('/api/validators', validatorsRouter);
+app.use('/api/bitcoin', bitcoinRouter);
 
 // 404 handler
 app.use((req, res) => {
@@ -93,6 +110,38 @@ const server = createServer(app);
 // Create WebSocket server
 const wss = createWebSocketServer(server);
 
+// Sync withdrawals from LCD endpoint
+async function syncWithdrawals() {
+  try {
+    const res = await axios.get(
+      `${config.lcdUrl}/twilight-project/nyks/bridge/withdraw_btc_request_all`,
+      { timeout: 30000 }
+    );
+    const withdrawals = res.data?.withdrawRequest || [];
+
+    let synced = 0;
+    for (const w of withdrawals) {
+      await prisma.btcWithdrawal.upsert({
+        where: { withdrawIdentifier: w.withdrawIdentifier },
+        update: { isConfirmed: w.isConfirmed },
+        create: {
+          withdrawIdentifier: w.withdrawIdentifier,
+          withdrawAddress: w.withdrawAddress,
+          withdrawReserveId: w.withdrawReserveId || '0',
+          withdrawAmount: BigInt(w.withdrawAmount || '0'),
+          twilightAddress: w.twilightAddress,
+          isConfirmed: w.isConfirmed,
+          blockHeight: parseInt(w.CreationTwilightBlockHeight || '0'),
+        },
+      });
+      synced++;
+    }
+    logger.info({ count: synced }, 'Withdrawals synced from LCD');
+  } catch (error) {
+    logger.error({ error }, 'Failed to sync withdrawals from LCD');
+  }
+}
+
 // Start server
 async function main() {
   // Test database connection
@@ -103,6 +152,10 @@ async function main() {
     logger.error({ error }, 'Failed to connect to database');
     process.exit(1);
   }
+
+  // Sync withdrawals from LCD on startup and every 20 minutes
+  syncWithdrawals();
+  setInterval(syncWithdrawals, 20 * 60 * 1000);
 
   server.listen(config.port, config.host, () => {
     logger.info(

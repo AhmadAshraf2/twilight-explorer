@@ -12,6 +12,12 @@ export const CACHE_TTL = {
   TXS_LIST: 10,        // 10 seconds for transactions list
   TX_DETAIL: 300,      // 5 minutes for transaction details (immutable)
   ZKOS_DECODED: 3600,  // 1 hour for zkOS decoded data (immutable)
+  VALIDATORS: 600,      // 10 minutes for validators (changes rarely)
+  VALIDATOR_COUNT: 600, // 10 minutes for validator count
+  VALIDATOR_BLOCKS: 30, // 30 seconds for validator block stats (from DB)
+  FRAGMENTS: 600,      // 10 minutes for fragments (LCD)
+  FRAGMENT_SINGLE: 600, // 10 minutes for single fragment (LCD)
+  SWEEP_ADDRESSES: 600, // 10 minutes for sweep addresses (LCD)
 } as const;
 
 // Initialize Redis client
@@ -115,8 +121,10 @@ export async function withCache<T>(
   // Fetch fresh data
   const data = await fetchFn();
 
-  // Store in cache (don't await to not block response)
-  setCache(key, data, ttlSeconds).catch(() => {});
+  // Only cache successful results (never cache null/undefined to avoid 404 caching)
+  if (data !== null && data !== undefined) {
+    setCache(key, data, ttlSeconds).catch(() => {});
+  }
 
   return data;
 }
@@ -129,4 +137,10 @@ export const CACHE_KEYS = {
   TXS_LIST: (page: number, limit: number, filters: string) => `cache:txs:${page}:${limit}:${filters}`,
   TX_DETAIL: (hash: string) => `cache:tx:${hash}`,
   ZKOS_DECODED: (txHash: string) => `cache:zkos:${txHash}`,
+  VALIDATORS: (status: string, limit: number) => `cache:validators:${status}:${limit}`,
+  VALIDATOR_COUNT: (status: string) => `cache:validator-count:${status}`,
+  VALIDATOR_BLOCKS: (address: string) => `cache:validator-blocks:${address}`,
+  FRAGMENTS_LIVE: 'cache:fragments:live',
+  FRAGMENT_SINGLE: (id: string) => `cache:fragment:${id}`,
+  SWEEP_ADDRESSES: (limit: number) => `cache:sweep-addresses:${limit}`,
 } as const;

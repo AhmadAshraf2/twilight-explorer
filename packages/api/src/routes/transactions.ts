@@ -46,6 +46,16 @@ router.get('/', async (req: Request, res: Response) => {
     const filters = txFilterSchema.parse(req.query);
     const skip = (page - 1) * limit;
 
+    // Build cache key from all parameters
+    const filterKey = JSON.stringify(filters);
+    const cacheKey = CACHE_KEYS.TXS_LIST(page, limit, filterKey);
+
+    // Try cache first
+    const cached = await getCache<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const where: any = {};
 
     if (filters.type) {
@@ -73,8 +83,12 @@ router.get('/', async (req: Request, res: Response) => {
         matchingHashes = mintBurns.map((mb) => mb.txHash);
       } else {
         // Query zkosTransfer table using the programType column
+        // Merge SettleTraderOrderNegativeMarginDifference into SettleTraderOrder
+        const programTypes = filters.programType === 'SettleTraderOrder'
+          ? ['SettleTraderOrder', 'SettleTraderOrderNegativeMarginDifference']
+          : [filters.programType];
         const zkosTransfers = await prisma.zkosTransfer.findMany({
-          where: { programType: filters.programType },
+          where: { programType: { in: programTypes } },
           select: { txHash: true },
         });
         matchingHashes = zkosTransfers.map((zt) => zt.txHash);
@@ -128,12 +142,15 @@ router.get('/', async (req: Request, res: Response) => {
 
     const programTypeMap = new Map<string, string | null>();
 
-    // Add ZkosTransfer programTypes
+    // Add ZkosTransfer programTypes (merge SettleTraderOrderNegativeMarginDifference → SettleTraderOrder)
     for (const zt of zkosTransfers) {
-      const programType = zt.programType
+      let programType = zt.programType
         || (zt.decodedData as any)?.summary?.program_type
         || (zt.decodedData as any)?.tx_type
         || null;
+      if (programType === 'SettleTraderOrderNegativeMarginDifference') {
+        programType = 'SettleTraderOrder';
+      }
       programTypeMap.set(zt.txHash, programType);
     }
 
@@ -148,7 +165,7 @@ router.get('/', async (req: Request, res: Response) => {
       programType: programTypeMap.get(tx.hash) || null,
     }));
 
-    res.json({
+    const result = {
       data: serializedTxs,
       pagination: {
         page,
@@ -156,7 +173,12 @@ router.get('/', async (req: Request, res: Response) => {
         total,
         totalPages: Math.ceil(total / limit),
       },
-    });
+    };
+
+    // Cache the result
+    setCache(cacheKey, result, CACHE_TTL.TXS_LIST).catch(() => {});
+
+    res.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid query parameters', details: error.errors });
@@ -224,6 +246,14 @@ async function fetchTransactionFromLcd(hash: string): Promise<any | null> {
 // NOTE: This route MUST be before /:hash to avoid "types" being matched as a hash
 router.get('/types/stats', async (req: Request, res: Response) => {
   try {
+    const cacheKey = 'cache:txs:types:stats';
+
+    // Try cache first
+    const cached = await getCache<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const stats = await prisma.transaction.groupBy({
       by: ['type'],
       _count: { type: true },
@@ -231,14 +261,104 @@ router.get('/types/stats', async (req: Request, res: Response) => {
       take: 20,
     });
 
-    res.json(
-      stats.map((s) => ({
-        type: s.type,
-        count: s._count.type,
-      }))
-    );
+    const result = stats.map((s) => ({
+      type: s.type,
+      count: s._count.type,
+    }));
+
+    // Cache for 30 seconds
+    setCache(cacheKey, result, CACHE_TTL.STATS).catch(() => {});
+
+    res.json(result);
   } catch (error) {
     console.error('Error fetching transaction stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/txs/script/:scriptAddress - Get transactions by script address
+// NOTE: This route MUST be before /:hash to avoid "script" being matched as a hash
+router.get('/script/:scriptAddress', async (req: Request, res: Response) => {
+  try {
+    const { scriptAddress } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const offset = (page - 1) * limit;
+
+    if (!scriptAddress || scriptAddress.length < 10) {
+      return res.status(400).json({ error: 'Invalid script address' });
+    }
+
+    // Try cache first
+    const cacheKey = `cache:script:${scriptAddress}:${page}:${limit}`;
+    const cached = await getCache<any>(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    // Search for script_address in decodedData JSON (handle both with and without space after colon)
+    const zkosTransfers = await prisma.$queryRaw<Array<{ txHash: string; blockHeight: number; programType: string | null }>>`
+      SELECT "txHash", "blockHeight", "programType"
+      FROM "ZkosTransfer"
+      WHERE "decodedData"::text LIKE '%"script_address": "' || ${scriptAddress} || '"%'
+         OR "decodedData"::text LIKE '%"script_address":"' || ${scriptAddress} || '"%'
+      ORDER BY "blockHeight" DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    // Get total count
+    const countResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(*) as count FROM "ZkosTransfer"
+      WHERE "decodedData"::text LIKE '%"script_address": "' || ${scriptAddress} || '"%'
+         OR "decodedData"::text LIKE '%"script_address":"' || ${scriptAddress} || '"%'
+    `;
+    const total = Number(countResult[0]?.count || 0);
+
+    // Get full transaction data for the matching hashes
+    const txHashes = zkosTransfers.map((zt) => zt.txHash);
+    const transactions = txHashes.length > 0
+      ? await prisma.transaction.findMany({
+          where: { hash: { in: txHashes } },
+          select: {
+            hash: true,
+            blockHeight: true,
+            blockTime: true,
+            type: true,
+            status: true,
+            gasUsed: true,
+          },
+          orderBy: { blockHeight: 'desc' },
+        })
+      : [];
+
+    // Build programType map
+    const programTypeMap = new Map(
+      zkosTransfers.map((zt) => [zt.txHash, zt.programType])
+    );
+
+    const serializedTxs = transactions.map((tx) => ({
+      ...tx,
+      gasUsed: tx.gasUsed.toString(),
+      programType: programTypeMap.get(tx.hash) || null,
+    }));
+
+    const result = {
+      data: serializedTxs,
+      scriptAddress,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+
+    // Cache the result
+    setCache(cacheKey, result, CACHE_TTL.TXS_LIST).catch(() => {});
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error searching transactions by script:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -252,12 +372,17 @@ router.get('/:hash', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid transaction hash' });
     }
 
-    // Try both uppercase and lowercase hash lookups
+    // Single query - try both uppercase and lowercase at once
     const upperHash = hash.toUpperCase();
     const lowerHash = hash.toLowerCase();
 
-    let transaction = await prisma.transaction.findUnique({
-      where: { hash: upperHash },
+    const transaction = await prisma.transaction.findFirst({
+      where: {
+        OR: [
+          { hash: upperHash },
+          { hash: lowerHash },
+        ],
+      },
       include: {
         block: {
           select: {
@@ -274,28 +399,6 @@ router.get('/:hash', async (req: Request, res: Response) => {
         },
       },
     });
-
-    // Try lowercase if uppercase not found
-    if (!transaction) {
-      transaction = await prisma.transaction.findUnique({
-        where: { hash: lowerHash },
-        include: {
-          block: {
-            select: {
-              height: true,
-              hash: true,
-              timestamp: true,
-            },
-          },
-          events: {
-            select: {
-              type: true,
-              attributes: true,
-            },
-          },
-        },
-      });
-    }
 
     // If not in database, fetch from LCD API
     if (!transaction) {

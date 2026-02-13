@@ -2,22 +2,59 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
 import {
-  Blocks,
   ArrowRightLeft,
   Users,
-  Activity,
-  TrendingUp,
   Wallet,
-  ShieldCheck,
-  Zap,
+  Shield,
+  Network,
+  Layers,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import { StatsCard } from '@/components/StatsCard';
-import { BlockCard } from '@/components/BlockCard';
-import { TxCard } from '@/components/TxCard';
-import { Loading, LoadingCard } from '@/components/Loading';
-import { getStats, getModuleStats, getBlocks, getRecentTransactions } from '@/lib/api';
+import { LoadingCard, LoadingTable } from '@/components/Loading';
+import { SearchBar } from '@/components/SearchBar';
+import {
+  getStats,
+  getModuleStats,
+  getBlocks,
+  getRecentTransactions,
+  getValidatorCount,
+  getNetworkPerformance,
+  getActiveAccounts,
+  getBridgeAnalytics,
+} from '@/lib/api';
+import { HeroPanel } from '@/components/dashboard/HeroPanel';
 
+// Format satoshis to BTC
+function formatBTC(satoshis: string | number): string {
+  const sats = typeof satoshis === 'string' ? BigInt(satoshis) : BigInt(satoshis);
+  const btc = Number(sats) / 100_000_000;
+
+  if (btc >= 1_000_000) {
+    return `${(btc / 1_000_000).toFixed(2)}M`;
+  } else if (btc >= 1_000) {
+    return `${(btc / 1_000).toFixed(2)}K`;
+  } else if (btc >= 1) {
+    return btc.toFixed(2);
+  } else {
+    return btc.toFixed(4);
+  }
+}
+//import { InfoFooter } from '@/components/dashboard/InfoFooter';
+function formatAgeShort(ts: string) {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(ts).getTime()) / 1000));
+  if (seconds < 60) return '<1m';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['stats'],
@@ -29,175 +66,319 @@ export default function Dashboard() {
     queryFn: getModuleStats,
   });
 
+  const { data: validatorCount, isLoading: validatorCountLoading } = useQuery({
+    queryKey: ['validatorCount', 'BOND_STATUS_BONDED'],
+    queryFn: () => getValidatorCount('BOND_STATUS_BONDED'),
+    staleTime: 600_000, // 10 minutes (matches cache TTL)
+    refetchInterval: false, // No auto-refetch, rely on cache
+  });
+
+  const { data: networkPerformance, isLoading: networkPerfLoading } = useQuery({
+    queryKey: ['network-performance'],
+    queryFn: getNetworkPerformance,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const { data: activeAccounts, isLoading: activeAccountsLoading } = useQuery({
+    queryKey: ['active-accounts'],
+    queryFn: getActiveAccounts,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+
+  const { data: bridgeAnalytics, isLoading: bridgeAnalyticsLoading } = useQuery({
+    queryKey: ['bridge-analytics'],
+    queryFn: getBridgeAnalytics,
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+
   const { data: blocksData, isLoading: blocksLoading } = useQuery({
-    queryKey: ['blocks', 1, 5],
-    queryFn: () => getBlocks(1, 5),
+    queryKey: ['blocks', 1, 8],
+    queryFn: () => getBlocks(1, 8),
   });
 
   const { data: transactions, isLoading: txsLoading } = useQuery({
     queryKey: ['recentTxs'],
-    queryFn: () => getRecentTransactions(5),
+    queryFn: () => getRecentTransactions(8),
   });
 
+  const recentBlocks = blocksData?.data?.slice(0, 8) ?? [];
+  const recentTxs = transactions?.slice(0, 8) ?? [];
+
   return (
+    <>
+      {/*<div className="grain-overlay" />*/}
+
     <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="text-center py-8">
-        <h1 className="text-4xl font-bold text-white mb-2">Twilight Explorer</h1>
-        <p className="text-text-secondary">
-          Explore blocks, transactions, and zkOS operations on Twilight
-        </p>
-        {stats?.latestBlock && (
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <span className="w-2 h-2 bg-accent-green rounded-full pulse-dot"></span>
-            <span className="text-text-secondary text-sm">
-              Latest Block: #{stats.latestBlock.height.toLocaleString()}
-            </span>
-          </div>
-        )}
-      </div>
+        {/* Hero */}
+        <HeroPanel stats={stats} moduleStats={moduleStats} networkPerformance={networkPerformance} />
 
-      {/* Main Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsLoading ? (
-          <>
-            <LoadingCard />
-            <LoadingCard />
-            <LoadingCard />
-            <LoadingCard />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="Total Blocks"
-              value={stats?.totalBlocks || 0}
-              icon={Blocks}
-              subtitle={stats?.latestBlock ? `Latest: #${stats.latestBlock.height}` : undefined}
-            />
-            <StatsCard
-              title="Total Transactions"
-              value={stats?.totalTransactions || 0}
-              icon={ArrowRightLeft}
-              change={`${stats?.transactionsLast24h || 0} in last 24h`}
-              changeType="positive"
-            />
-            <StatsCard
-              title="Total Accounts"
-              value={stats?.totalAccounts || 0}
-              icon={Users}
-            />
-            <StatsCard
-              title="Success Rate"
-              value={
-                stats?.transactionsByStatus
-                  ? `${(((stats.transactionsByStatus.success || 0) / (stats.totalTransactions || 1)) * 100).toFixed(1)}%`
-                  : '0%'
-              }
-              icon={Activity}
-            />
-          </>
-        )}
-      </div>
+        {/* Primary Search (explorer high point) */}
+        <section className="card card-hover rounded-[14px] p-5 sm:p-6 bg-card border border-primary/20 shadow-glow">
+          <SearchBar size="lg" />
+        </section>
 
-      {/* Module Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {moduleStatsLoading ? (
-          <>
-            <LoadingCard />
-            <LoadingCard />
-            <LoadingCard />
-            <LoadingCard />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="BTC Deposits"
-              value={moduleStats?.bridge.deposits || 0}
-              icon={Wallet}
-              subtitle="Bridge Module"
-            />
-            <StatsCard
-              title="BTC Withdrawals"
-              value={moduleStats?.bridge.withdrawals || 0}
-              icon={Wallet}
-              subtitle="Bridge Module"
-            />
-            <StatsCard
-              title="Active Fragments"
-              value={moduleStats?.volt.activeFragments || 0}
-              icon={ShieldCheck}
-              subtitle="Volt Module"
-            />
-            <StatsCard
-              title="zkOS Transfers"
-              value={moduleStats?.zkos.transfers || 0}
-              icon={Zap}
-              subtitle="zkOS Module"
-            />
-          </>
-        )}
-      </div>
-
-      {/* Recent Blocks and Transactions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Blocks */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white">Recent Blocks</h2>
-            <Link
-              href="/blocks"
-              className="text-primary-light hover:text-primary text-sm"
-            >
-              View All
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {blocksLoading ? (
+        {/* Stats rows (2x3 grid - symmetric layout) */}
+        <section className="space-y-6">
+          {/* Row 1: Core Network Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {statsLoading || activeAccountsLoading ? (
               <>
                 <LoadingCard />
                 <LoadingCard />
                 <LoadingCard />
               </>
-            ) : blocksData?.data.length ? (
-              blocksData.data.map((block) => (
-                <BlockCard key={block.height} block={block} />
-              ))
             ) : (
-              <div className="card text-center text-text-secondary py-8">
-                No blocks found
-              </div>
+              <>
+                <StatsCard
+                  title="Total Transactions"
+                  value={stats?.totalTransactions || 0}
+                  icon={ArrowRightLeft}
+                  badge={`${stats?.transactionsLast24h || 0}: 24h`}
+                  href="/txs"
+                />
+                <StatsCard
+                  title="Active Accounts"
+                  value={activeAccounts?.active24h || 0}
+                  icon={Users}
+                  badge="24h"
+                />
+                <StatsCard
+                  title="Active Validators"
+                  value={validatorCount || 0}
+                  icon={Network}
+                  badge="Bonded"
+                  href="/validators"
+                />
+              </>
             )}
           </div>
+
+          {/* Row 2: Volume & Security Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {moduleStatsLoading || bridgeAnalyticsLoading ? (
+              <>
+                <LoadingCard />
+                <LoadingCard />
+                <LoadingCard />
+              </>
+            ) : (
+              <>
+                <StatsCard
+                  title="BTC Transfer Volume"
+                  value={
+                    bridgeAnalytics?.totalVolume
+                      ? `${formatBTC(bridgeAnalytics.totalVolume)} BTC`
+                      : '0 BTC'
+                  }
+                  icon={Wallet}
+                  badge="Cumulative"
+                  href="/deposits"
+                />
+                <StatsCard
+                  title="Shielded Transfer Volume"
+                  value={
+                    moduleStats?.zkos.volume ? `${formatBTC(moduleStats.zkos.volume)} BTC` : '0 BTC'
+                  }
+                  icon={Shield}
+                  badge="Cumulative"
+                  tooltip="Aggregate BTC transferred through the privacy layer."
+                />
+                <StatsCard
+                  title="Fragments"
+                  value={moduleStats?.volt.activeFragments || 0}
+                  icon={Layers}
+                  badge="Active"
+                  href="/fragments"
+                />
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* Secondary row: recent blocks + recent tx cards (kept as explorer equivalent) */}
+        <section className="space-y-6">
+        {/* Recent Blocks */}
+          <div className="card">
+          <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white font-medium text-[15.8px] leading-[24px]">Recent Blocks</h2>
+              <Link href="/blocks" className={"text-[12.5px] leading-[18px] font-medium text-primary-light hover:text-primary transition-colors"}>
+              View All
+            </Link>
+          </div>
+
+            {blocksLoading ? (
+              <LoadingTable rows={3} />
+            ) : recentBlocks.length ? (
+              <>
+                {/* Mobile: card layout */}
+                <div className="md:hidden space-y-3">
+                  {recentBlocks.map((block) => (
+                    <Link
+                      key={block.height}
+                      href={`/blocks/${block.height}`}
+                      className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-white">#{block.height.toLocaleString()}</span>
+                        <span className="badge badge-info">{block.txCount} txns</span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary text-sm">
+                        <span className="font-mono">{block.hash.substring(0, 10)}…{block.hash.substring(block.hash.length - 6)}</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {/* Desktop: table */}
+                <div className="hidden md:block table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Height</th>
+                        <th>Txns</th>
+                        <th>Proposer</th>
+                        <th>Hash</th>
+                        <th>Age</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentBlocks.map((block) => (
+                        <tr key={block.height}>
+                          <td>
+                            <Link href={`/blocks/${block.height}`} className="font-medium">
+                              #{block.height.toLocaleString()}
+                            </Link>
+                          </td>
+                          <td>
+                            <span className="badge badge-info">{block.txCount}</span>
+                          </td>
+                          <td className="text-text-secondary font-mono text-sm">
+                            {block.proposer ? `${block.proposer.substring(0, 10)}…${block.proposer.substring(block.proposer.length - 6)}` : '—'}
+                          </td>
+                          <td className="text-text-secondary font-mono text-sm">
+                            {block.hash.substring(0, 10)}…{block.hash.substring(block.hash.length - 6)}
+                          </td>
+                          <td>
+                            <div className="flex items-center gap-1 text-text-secondary text-sm">
+                              <Clock className="w-3 h-3" />
+                              {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div className="text-center text-text-secondary py-8">No blocks found</div>
+            )}
         </div>
 
         {/* Recent Transactions */}
-        <div>
+          <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white">Recent Transactions</h2>
-            <Link
-              href="/txs"
-              className="text-primary-light hover:text-primary text-sm"
-            >
+              <h2 className="text-white font-medium text-[15.8px] leading-[24px]">Recent Transactions</h2>
+              <Link href="/txs" className="text-[12.5px] leading-[18px] font-medium text-primary-light hover:text-primary transition-colors">
               View All
             </Link>
           </div>
-          <div className="space-y-3">
+
             {txsLoading ? (
+              <LoadingTable rows={3} />
+            ) : recentTxs.length ? (
               <>
-                <LoadingCard />
-                <LoadingCard />
-                <LoadingCard />
+                {/* Mobile: card layout */}
+                <div className="md:hidden space-y-3">
+                  {recentTxs.map((tx) => (
+                    <Link
+                      key={tx.hash}
+                      href={`/txs/${tx.hash}`}
+                      className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                    >
+                      <div className="font-mono text-sm text-primary-light truncate">
+                        {tx.hash.substring(0, 12)}...{tx.hash.substring(tx.hash.length - 6)}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="badge badge-primary">
+                          {tx.type.split('.').pop()?.replace('Msg', '')}
+                        </span>
+                        <span className={tx.status === 'success' ? 'badge badge-success' : 'badge badge-error'}>
+                          {tx.status === 'success' ? (
+                            <CheckCircle className="w-3 h-3" />
+                          ) : (
+                            <XCircle className="w-3 h-3" />
+                          )}
+                          {tx.status}
+                        </span>
+                        <span className="flex items-center gap-1 text-text-secondary text-sm">
+                          <Clock className="w-3 h-3" />
+                          {formatDistanceToNow(new Date(tx.blockTime), { addSuffix: true })}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                {/* Desktop: table */}
+                <div className="hidden md:block table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Hash</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentTxs.map((tx) => (
+                        <tr key={tx.hash}>
+                          <td>
+                            <Link href={`/txs/${tx.hash}`} className="font-mono text-sm">
+                              {tx.hash.substring(0, 12)}...{tx.hash.substring(tx.hash.length - 6)}
+                            </Link>
+                          </td>
+                          <td>
+                            <span className="badge badge-primary">
+                              {tx.type.split('.').pop()?.replace('Msg', '')}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={tx.status === 'success' ? 'badge badge-success' : 'badge badge-error'}>
+                              {tx.status === 'success' ? (
+                                <CheckCircle className="w-3 h-3" />
+                              ) : (
+                                <XCircle className="w-3 h-3" />
+                              )}
+                              {tx.status}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="flex items-center gap-1 text-text-secondary text-sm">
+                              <Clock className="w-3 h-3" />
+                              {formatDistanceToNow(new Date(tx.blockTime), { addSuffix: true })}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </>
-            ) : transactions?.length ? (
-              transactions.map((tx) => <TxCard key={tx.hash} tx={tx} />)
             ) : (
-              <div className="card text-center text-text-secondary py-8">
-                No transactions found
-              </div>
+              <div className="text-center text-text-secondary py-8">No transactions found</div>
             )}
           </div>
-        </div>
+        </section>
+
+        {/*<InfoFooter />*/}
       </div>
-    </div>
+    </>
   );
 }

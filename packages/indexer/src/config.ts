@@ -14,6 +14,9 @@ export const config = {
   // Twilight LCD API
   lcdUrl: process.env.TWILIGHT_LCD_URL || 'https://lcd.twilight.org',
 
+  // Twilight gRPC endpoint
+  grpcUrl: process.env.TWILIGHT_GRPC_URL || 'localhost:9090',
+
   // zkOS Decode API
   zkosDecodeUrl: process.env.ZKOS_DECODE_URL || 'https://indexer.twilight.org',
 

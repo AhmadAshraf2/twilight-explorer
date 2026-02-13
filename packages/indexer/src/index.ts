@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { startSync, stopSync, getSyncStatus, indexerEvents } from './sync.js';
-import { lcdClient } from './lcd-client.js';
+import { grpcClient } from './grpc-client.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
 import Redis from 'ioredis';
@@ -65,15 +65,16 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Test LCD connection
+  // Test gRPC connection
   try {
-    const latestBlock = await lcdClient.getLatestBlock();
+    await grpcClient.waitForReady(10000);
+    const latestBlock = await grpcClient.getLatestBlock();
     logger.info(
       { height: latestBlock.block.header.height, chainId: latestBlock.block.header.chain_id },
-      'LCD connected'
+      'gRPC connected'
     );
   } catch (error) {
-    logger.error({ error }, 'Failed to connect to LCD');
+    logger.error({ error }, 'Failed to connect to gRPC');
     process.exit(1);
   }
 
@@ -87,6 +88,7 @@ async function main(): Promise<void> {
   process.on('SIGINT', async () => {
     logger.info('Received SIGINT, shutting down...');
     stopSync();
+    grpcClient.close();
     await prisma.$disconnect();
     if (redis) await redis.quit();
     process.exit(0);
@@ -95,6 +97,7 @@ async function main(): Promise<void> {
   process.on('SIGTERM', async () => {
     logger.info('Received SIGTERM, shutting down...');
     stopSync();
+    grpcClient.close();
     await prisma.$disconnect();
     if (redis) await redis.quit();
     process.exit(0);
@@ -106,6 +109,7 @@ async function main(): Promise<void> {
 
 // Export for external use
 export { startSync, stopSync, getSyncStatus, indexerEvents };
+export { grpcClient } from './grpc-client.js';
 export { lcdClient } from './lcd-client.js';
 export { config } from './config.js';
 export * from './decoders/index.js';

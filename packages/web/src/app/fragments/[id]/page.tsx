@@ -351,7 +351,7 @@ export default function FragmentDetailPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary mb-1">On-Chain Balance</p>
+                  <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary mb-1">BTC Balance</p>
                   {balanceLoading ? (
                     <p className="text-text-muted text-sm">Loading...</p>
                   ) : btcBalance ? (

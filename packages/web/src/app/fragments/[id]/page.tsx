@@ -24,6 +24,7 @@ import {
   getFragment,
   getSweepAddresses,
   getDelegates,
+  getBtcAddressBalance,
 } from '@/lib/api';
 
 function CopyButton({ text }: { text: string }) {
@@ -84,6 +85,22 @@ export default function FragmentDetailPage() {
     queryKey: ['delegates'],
     queryFn: getDelegates,
     staleTime: 600_000,
+    refetchInterval: false,
+  });
+
+  const latestSweepAddr = (() => {
+    if (!fragment || !sweepData?.proposeSweepAddressMsgs) return undefined;
+    const sorted = sweepData.proposeSweepAddressMsgs
+      .filter((s) => s.judgeAddress === fragment.judgeAddress)
+      .sort((a, b) => parseInt(b.roundId, 10) - parseInt(a.roundId, 10));
+    return sorted[0]?.btcAddress;
+  })();
+
+  const { data: btcBalance, isLoading: balanceLoading } = useQuery({
+    queryKey: ['btc-balance', latestSweepAddr],
+    queryFn: () => getBtcAddressBalance(latestSweepAddr!),
+    enabled: !!latestSweepAddr,
+    staleTime: 12 * 60 * 60 * 1000, // 12 hours
     refetchInterval: false,
   });
 
@@ -332,6 +349,23 @@ export default function FragmentDetailPage() {
                     </a>
                     <CopyButton text={latestSweep.btcAddress} />
                   </div>
+                </div>
+                <div>
+                  <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary mb-1">On-Chain Balance</p>
+                  {balanceLoading ? (
+                    <p className="text-text-muted text-sm">Loading...</p>
+                  ) : btcBalance ? (
+                    <div>
+                      <p className="text-accent-yellow font-medium font-mono">
+                        {(btcBalance.balanceSats / 100_000_000).toFixed(8)} BTC
+                      </p>
+                      <p className="text-text-secondary text-xs font-mono">
+                        {btcBalance.balanceSats.toLocaleString()} sats
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-text-muted text-sm">—</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary mb-1">Reserve Script</p>

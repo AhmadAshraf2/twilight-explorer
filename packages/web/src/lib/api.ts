@@ -354,6 +354,16 @@ export interface SweepAddressesResponse {
   proposeSweepAddressMsgs: SweepAddress[];
 }
 
+// BTC address balance (via mempool.space, cached)
+export interface BtcAddressBalance {
+  address: string;
+  balanceSats: number;
+  txCount: number;
+}
+
+export const getBtcAddressBalance = (address: string) =>
+  fetchApi<BtcAddressBalance>(`/api/bitcoin/address/${address}/balance`);
+
 // Sweep addresses (cached via API)
 export const getSweepAddresses = (limit = 100): Promise<SweepAddressesResponse> =>
   fetchApi<SweepAddressesResponse>(`/api/twilight/sweep-addresses?limit=${limit}`);

@@ -1,0 +1,65 @@
+syntax = "proto3";
+package cosmos.gov.v1beta1;
+
+import "gogoproto/gogo.proto";
+import "cosmos/base/v1beta1/coin.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "github.com/cosmos/cosmos-sdk/x/gov/types";
+
+// VoteOption enumerates the valid vote options for a given governance proposal.
+enum VoteOption {
+  option (gogoproto.goproto_enum_prefix) = false;
+  VOTE_OPTION_UNSPECIFIED  = 0 [(gogoproto.enumvalue_customname) = "OptionEmpty"];
+  VOTE_OPTION_YES          = 1 [(gogoproto.enumvalue_customname) = "OptionYes"];
+  VOTE_OPTION_ABSTAIN      = 2 [(gogoproto.enumvalue_customname) = "OptionAbstain"];
+  VOTE_OPTION_NO           = 3 [(gogoproto.enumvalue_customname) = "OptionNo"];
+  VOTE_OPTION_NO_WITH_VETO = 4 [(gogoproto.enumvalue_customname) = "OptionNoWithVeto"];
+}
+
+// WeightedVoteOption defines a unit of vote for vote split.
+message WeightedVoteOption {
+  VoteOption option = 1;
+  string     weight = 2 [(gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec", (gogoproto.nullable) = false];
+}
+
+// MsgSubmitProposal defines an sdk.Msg type that supports submitting arbitrary proposal Content.
+message MsgSubmitProposal {
+  option (gogoproto.equal) = false;
+  google.protobuf.Any              content         = 1;
+  repeated cosmos.base.v1beta1.Coin initial_deposit = 2
+      [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"];
+  string proposer = 3;
+}
+
+message MsgSubmitProposalResponse {
+  uint64 proposal_id = 1;
+}
+
+// MsgVote defines a message to cast a vote.
+message MsgVote {
+  uint64     proposal_id = 1;
+  string     voter       = 2;
+  VoteOption option      = 3;
+}
+
+message MsgVoteResponse {}
+
+// MsgVoteWeighted defines a message to cast a vote with options.
+message MsgVoteWeighted {
+  uint64                        proposal_id = 1;
+  string                        voter       = 2;
+  repeated WeightedVoteOption   options     = 3 [(gogoproto.nullable) = false];
+}
+
+message MsgVoteWeightedResponse {}
+
+// MsgDeposit defines a message to submit a deposit to an existing proposal.
+message MsgDeposit {
+  uint64                         proposal_id = 1;
+  string                         depositor   = 2;
+  repeated cosmos.base.v1beta1.Coin amount   = 3
+      [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"];
+}
+
+message MsgDepositResponse {}

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { lcdClient, TxResponse, BlockWithTxsResponse } from './lcd-client.js';
+import { TxResponse, BlockWithTxsResponse } from './lcd-client.js';
+import { grpcClient } from './grpc-client.js';
 import {
   decodeMessage,
   serializeDecodedData,
@@ -69,15 +70,24 @@ async function processBlock(height: number): Promise<void> {
 
   try {
     // Fetch block header first
-    const blockInfo = await lcdClient.getBlockByHeight(height);
+    const blockInfo = await grpcClient.getBlockByHeight(height);
 
     // Fetch transactions using the events query (returns proper tx_responses with txhash)
     let txResponses: any[] = [];
     try {
-      const txData = await lcdClient.getTxsByHeight(height);
+      const txData = await grpcClient.getTxsByHeight(height);
       txResponses = txData.tx_responses || [];
-    } catch (err) {
-      // No transactions in this block (404 or empty)
+    } catch (err: any) {
+      // Log the error - don't silently swallow gRPC errors
+      const isNotFound = err?.code === 5; // gRPC NOT_FOUND
+      if (!isNotFound) {
+        logger.warn({
+          height,
+          errorMessage: err?.message || String(err),
+          errorCode: err?.code,
+          errorDetails: err?.details,
+        }, 'Failed to fetch transactions for block');
+      }
       txResponses = [];
     }
 
@@ -206,7 +216,7 @@ async function processBlock(height: number): Promise<void> {
   } catch (error) {
     if ((error as any)?.response?.status === 400) {
       // No transactions in this block, just store the block
-      const blockInfo = await lcdClient.getBlockByHeight(height);
+      const blockInfo = await grpcClient.getBlockByHeight(height);
 
       await prisma.block.upsert({
         where: { height },
@@ -621,7 +631,7 @@ export async function startSync(): Promise<void> {
   try {
     while (!stopRequested) {
       const lastIndexed = await getLastIndexedHeight();
-      const latestHeight = await lcdClient.getLatestBlockHeight();
+      const latestHeight = await grpcClient.getLatestBlockHeight();
 
       if (lastIndexed >= latestHeight) {
         // Up to date, wait for new blocks
@@ -686,7 +696,7 @@ export async function getSyncStatus(): Promise<{
   blocksRemaining: number;
 }> {
   const lastIndexed = await getLastIndexedHeight();
-  const latestHeight = await lcdClient.getLatestBlockHeight();
+  const latestHeight = await grpcClient.getLatestBlockHeight();
 
   return {
     isRunning,

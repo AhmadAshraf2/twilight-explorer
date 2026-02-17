@@ -18,6 +18,7 @@ export const CACHE_TTL = {
   FRAGMENTS: 600,      // 10 minutes for fragments (LCD)
   FRAGMENT_SINGLE: 600, // 10 minutes for single fragment (LCD)
   SWEEP_ADDRESSES: 600, // 10 minutes for sweep addresses (LCD)
+  BTC_BALANCE: 43200,  // 12 hours for BTC address balance (mempool.space)
 } as const;
 
 // Initialize Redis client
@@ -143,4 +144,5 @@ export const CACHE_KEYS = {
   FRAGMENTS_LIVE: 'cache:fragments:live',
   FRAGMENT_SINGLE: (id: string) => `cache:fragment:${id}`,
   SWEEP_ADDRESSES: (limit: number) => `cache:sweep-addresses:${limit}`,
+  BTC_BALANCE: (address: string) => `cache:btc:balance:${address}`,
 } as const;

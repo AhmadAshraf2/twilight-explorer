@@ -15,6 +15,13 @@ import {
   FileSignature,
   RefreshCw,
   ExternalLink,
+  Layers,
+  Award,
+  Vote,
+  Shield,
+  PenLine,
+  Banknote,
+  ArrowLeftRight,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { ZkosTransactionViewer } from './ZkosTransactionViewer';
@@ -707,7 +714,7 @@ const messageConfigs: Record<string, MessageConfig> = {
     ),
   },
 
-  // Cosmos SDK standard messages
+  // Cosmos SDK standard messages - Bank
   '/cosmos.bank.v1beta1.MsgSend': {
     icon: Send,
     iconColor: 'text-accent-blue',
@@ -733,6 +740,349 @@ const messageConfigs: Record<string, MessageConfig> = {
           ) : (
             <span className="text-text-muted">-</span>
           )}
+        </DataRow>
+      </>
+    ),
+  },
+
+  // Cosmos SDK standard messages - Staking
+  '/cosmos.staking.v1beta1.MsgDelegate': {
+    icon: Layers,
+    iconColor: 'text-accent-green',
+    bgColor: 'bg-accent-green/10',
+    title: 'Delegate',
+    render: (data) => (
+      <>
+        <DataRow label="Delegator">
+          <AddressLink address={data.delegator_address || data.delegatorAddress} truncate={false} />
+        </DataRow>
+        <DataRow label="Validator">
+          <AddressLink address={data.validator_address || data.validatorAddress} truncate={false} />
+        </DataRow>
+        <DataRow label="Amount">
+          {data.amount ? (
+            <span className="text-accent-green font-semibold">
+              {formatCoinAmount(data.amount.amount, data.amount.denom)}
+            </span>
+          ) : <span className="text-text-muted">-</span>}
+        </DataRow>
+      </>
+    ),
+  },
+
+  '/cosmos.staking.v1beta1.MsgUndelegate': {
+    icon: Layers,
+    iconColor: 'text-accent-orange',
+    bgColor: 'bg-accent-orange/10',
+    title: 'Undelegate',
+    render: (data) => (
+      <>
+        <DataRow label="Delegator">
+          <AddressLink address={data.delegator_address || data.delegatorAddress} truncate={false} />
+        </DataRow>
+        <DataRow label="Validator">
+          <AddressLink address={data.validator_address || data.validatorAddress} truncate={false} />
+        </DataRow>
+        <DataRow label="Amount">
+          {data.amount ? (
+            <span className="text-accent-orange font-semibold">
+              {formatCoinAmount(data.amount.amount, data.amount.denom)}
+            </span>
+          ) : <span className="text-text-muted">-</span>}
+        </DataRow>
+      </>
+    ),
+  },
+
+  '/cosmos.staking.v1beta1.MsgBeginRedelegate': {
+    icon: ArrowLeftRight,
+    iconColor: 'text-accent-yellow',
+    bgColor: 'bg-accent-yellow/10',
+    title: 'Redelegate',
+    render: (data) => (
+      <>
+        <DataRow label="Delegator">
+          <AddressLink address={data.delegator_address || data.delegatorAddress} truncate={false} />
+        </DataRow>
+        <DataRow label="From Validator">
+          <AddressLink address={data.validator_src_address || data.validatorSrcAddress} truncate={false} />
+        </DataRow>
+        <DataRow label="To Validator">
+          <AddressLink address={data.validator_dst_address || data.validatorDstAddress} truncate={false} />
+        </DataRow>
+        <DataRow label="Amount">
+          {data.amount ? (
+            <span className="text-accent-yellow font-semibold">
+              {formatCoinAmount(data.amount.amount, data.amount.denom)}
+            </span>
+          ) : <span className="text-text-muted">-</span>}
+        </DataRow>
+      </>
+    ),
+  },
+
+  '/cosmos.staking.v1beta1.MsgCreateValidator': {
+    icon: UserCheck,
+    iconColor: 'text-accent-green',
+    bgColor: 'bg-accent-green/10',
+    title: 'Create Validator',
+    render: (data) => {
+      const desc = data.description || {};
+      return (
+        <>
+          <DataRow label="Moniker">
+            <span className="text-white font-semibold">{desc.moniker || '-'}</span>
+          </DataRow>
+          <DataRow label="Validator">
+            <AddressLink address={data.validator_address || data.validatorAddress} truncate={false} />
+          </DataRow>
+          <DataRow label="Delegator">
+            <AddressLink address={data.delegator_address || data.delegatorAddress} truncate={false} />
+          </DataRow>
+          <DataRow label="Self-Delegation">
+            {data.value ? (
+              <span className="text-accent-green font-semibold">
+                {formatCoinAmount(data.value.amount, data.value.denom)}
+              </span>
+            ) : <span className="text-text-muted">-</span>}
+          </DataRow>
+          {desc.website && (
+            <DataRow label="Website">
+              <span className="text-primary-light">{desc.website}</span>
+            </DataRow>
+          )}
+          {desc.details && (
+            <DataRow label="Details">
+              <span className="text-text-secondary">{desc.details}</span>
+            </DataRow>
+          )}
+        </>
+      );
+    },
+  },
+
+  '/cosmos.staking.v1beta1.MsgEditValidator': {
+    icon: PenLine,
+    iconColor: 'text-accent-blue',
+    bgColor: 'bg-accent-blue/10',
+    title: 'Edit Validator',
+    render: (data) => {
+      const desc = data.description || {};
+      return (
+        <>
+          <DataRow label="Validator">
+            <AddressLink address={data.validator_address || data.validatorAddress} truncate={false} />
+          </DataRow>
+          {desc.moniker && (
+            <DataRow label="Moniker">
+              <span className="text-white font-semibold">{desc.moniker}</span>
+            </DataRow>
+          )}
+          {(data.commission_rate || data.commissionRate) && (
+            <DataRow label="Commission Rate">
+              <span className="font-mono">{data.commission_rate || data.commissionRate}</span>
+            </DataRow>
+          )}
+        </>
+      );
+    },
+  },
+
+  // Cosmos SDK standard messages - Distribution
+  '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward': {
+    icon: Award,
+    iconColor: 'text-accent-green',
+    bgColor: 'bg-accent-green/10',
+    title: 'Withdraw Rewards',
+    render: (data) => (
+      <>
+        <DataRow label="Delegator">
+          <AddressLink address={data.delegator_address || data.delegatorAddress} truncate={false} />
+        </DataRow>
+        <DataRow label="Validator">
+          <AddressLink address={data.validator_address || data.validatorAddress} truncate={false} />
+        </DataRow>
+      </>
+    ),
+  },
+
+  '/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission': {
+    icon: Award,
+    iconColor: 'text-accent-yellow',
+    bgColor: 'bg-accent-yellow/10',
+    title: 'Withdraw Commission',
+    render: (data) => (
+      <>
+        <DataRow label="Validator">
+          <AddressLink address={data.validator_address || data.validatorAddress} truncate={false} />
+        </DataRow>
+      </>
+    ),
+  },
+
+  '/cosmos.distribution.v1beta1.MsgSetWithdrawAddress': {
+    icon: Wallet,
+    iconColor: 'text-primary-light',
+    bgColor: 'bg-primary/10',
+    title: 'Set Withdraw Address',
+    render: (data) => (
+      <>
+        <DataRow label="Delegator">
+          <AddressLink address={data.delegator_address || data.delegatorAddress} truncate={false} />
+        </DataRow>
+        <DataRow label="Withdraw Address">
+          <AddressLink address={data.withdraw_address || data.withdrawAddress} truncate={false} />
+        </DataRow>
+      </>
+    ),
+  },
+
+  '/cosmos.distribution.v1beta1.MsgFundCommunityPool': {
+    icon: Banknote,
+    iconColor: 'text-accent-green',
+    bgColor: 'bg-accent-green/10',
+    title: 'Fund Community Pool',
+    render: (data) => (
+      <>
+        <DataRow label="Depositor">
+          <AddressLink address={data.depositor} truncate={false} />
+        </DataRow>
+        <DataRow label="Amount">
+          {data.amount && Array.isArray(data.amount) ? (
+            <div className="flex flex-col gap-1">
+              {data.amount.map((coin: any, i: number) => (
+                <span key={i} className="text-accent-green font-semibold">
+                  {formatCoinAmount(coin.amount, coin.denom)}
+                </span>
+              ))}
+            </div>
+          ) : <span className="text-text-muted">-</span>}
+        </DataRow>
+      </>
+    ),
+  },
+
+  // Cosmos SDK standard messages - Governance
+  '/cosmos.gov.v1beta1.MsgVote': {
+    icon: Vote,
+    iconColor: 'text-primary-light',
+    bgColor: 'bg-primary/10',
+    title: 'Vote',
+    render: (data) => {
+      const voteOptions: Record<number, string> = {
+        0: 'Unspecified', 1: 'Yes', 2: 'Abstain', 3: 'No', 4: 'No With Veto',
+      };
+      const optionValue = data.option ?? 0;
+      const optionLabel = typeof optionValue === 'string'
+        ? optionValue.replace('VOTE_OPTION_', '').replace(/_/g, ' ')
+        : voteOptions[optionValue] || String(optionValue);
+      return (
+        <>
+          <DataRow label="Proposal">
+            <span className="font-mono text-accent-yellow">#{data.proposal_id || data.proposalId}</span>
+          </DataRow>
+          <DataRow label="Voter">
+            <AddressLink address={data.voter} truncate={false} />
+          </DataRow>
+          <DataRow label="Vote">
+            <span className="font-semibold text-white">{optionLabel}</span>
+          </DataRow>
+        </>
+      );
+    },
+  },
+
+  '/cosmos.gov.v1beta1.MsgSubmitProposal': {
+    icon: FileSignature,
+    iconColor: 'text-primary-light',
+    bgColor: 'bg-primary/10',
+    title: 'Submit Proposal',
+    render: (data) => (
+      <>
+        <DataRow label="Proposer">
+          <AddressLink address={data.proposer} truncate={false} />
+        </DataRow>
+        <DataRow label="Initial Deposit">
+          {(data.initial_deposit || data.initialDeposit) && Array.isArray(data.initial_deposit || data.initialDeposit) ? (
+            <div className="flex flex-col gap-1">
+              {(data.initial_deposit || data.initialDeposit).map((coin: any, i: number) => (
+                <span key={i} className="text-accent-green font-semibold">
+                  {formatCoinAmount(coin.amount, coin.denom)}
+                </span>
+              ))}
+            </div>
+          ) : <span className="text-text-muted">-</span>}
+        </DataRow>
+      </>
+    ),
+  },
+
+  '/cosmos.gov.v1beta1.MsgDeposit': {
+    icon: Banknote,
+    iconColor: 'text-primary-light',
+    bgColor: 'bg-primary/10',
+    title: 'Deposit to Proposal',
+    render: (data) => (
+      <>
+        <DataRow label="Proposal">
+          <span className="font-mono text-accent-yellow">#{data.proposal_id || data.proposalId}</span>
+        </DataRow>
+        <DataRow label="Depositor">
+          <AddressLink address={data.depositor} truncate={false} />
+        </DataRow>
+        <DataRow label="Amount">
+          {data.amount && Array.isArray(data.amount) ? (
+            <div className="flex flex-col gap-1">
+              {data.amount.map((coin: any, i: number) => (
+                <span key={i} className="text-accent-green font-semibold">
+                  {formatCoinAmount(coin.amount, coin.denom)}
+                </span>
+              ))}
+            </div>
+          ) : <span className="text-text-muted">-</span>}
+        </DataRow>
+      </>
+    ),
+  },
+
+  '/cosmos.gov.v1beta1.MsgVoteWeighted': {
+    icon: Vote,
+    iconColor: 'text-primary-light',
+    bgColor: 'bg-primary/10',
+    title: 'Weighted Vote',
+    render: (data) => (
+      <>
+        <DataRow label="Proposal">
+          <span className="font-mono text-accent-yellow">#{data.proposal_id || data.proposalId}</span>
+        </DataRow>
+        <DataRow label="Voter">
+          <AddressLink address={data.voter} truncate={false} />
+        </DataRow>
+        <DataRow label="Options">
+          {data.options && Array.isArray(data.options) ? (
+            <div className="flex flex-col gap-1">
+              {data.options.map((opt: any, i: number) => (
+                <span key={i} className="text-white">
+                  {opt.option}: {opt.weight}
+                </span>
+              ))}
+            </div>
+          ) : <span className="text-text-muted">-</span>}
+        </DataRow>
+      </>
+    ),
+  },
+
+  // Cosmos SDK standard messages - Slashing
+  '/cosmos.slashing.v1beta1.MsgUnjail': {
+    icon: Shield,
+    iconColor: 'text-accent-orange',
+    bgColor: 'bg-accent-orange/10',
+    title: 'Unjail Validator',
+    render: (data) => (
+      <>
+        <DataRow label="Validator">
+          <AddressLink address={data.validator_addr || data.validatorAddr} truncate={false} />
         </DataRow>
       </>
     ),

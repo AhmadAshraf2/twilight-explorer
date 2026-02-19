@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import pino from 'pino';
-import axios from 'axios';
 import { createServer } from 'http';
 import { PrismaClient } from '@prisma/client';
 
@@ -52,7 +51,7 @@ app.use(
   pinoHttp({
     logger,
     autoLogging: {
-      ignore: (req) => req.url === '/health',
+      ignore: (req) => (req.url || '').startsWith('/health'),
     },
   })
 );
@@ -67,7 +66,52 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Health check
+// Health checks
+app.get('/health/live', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.get('/health/ready', async (req, res) => {
+  const checks: Record<string, string> = {};
+  let healthy = true;
+
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = 'ok';
+  } catch {
+    checks.database = 'failed';
+    healthy = false;
+  }
+
+  try {
+    const { getRedisClient } = await import('./cache.js');
+    const redis = getRedisClient();
+    if (redis) {
+      await redis.ping();
+      checks.redis = 'ok';
+    } else {
+      checks.redis = 'unavailable';
+    }
+  } catch {
+    checks.redis = 'failed';
+    healthy = false;
+  }
+
+  try {
+    const state = await prisma.indexerState.findUnique({ where: { key: 'lastIndexedHeight' } });
+    checks.lastIndexedHeight = state?.value || 'unknown';
+  } catch {
+    checks.lastIndexedHeight = 'unknown';
+  }
+
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'ready' : 'not_ready',
+    checks,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Backward-compatible alias
 app.get('/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -110,38 +154,6 @@ const server = createServer(app);
 // Create WebSocket server
 const wss = createWebSocketServer(server);
 
-// Sync withdrawals from LCD endpoint
-async function syncWithdrawals() {
-  try {
-    const res = await axios.get(
-      `${config.lcdUrl}/twilight-project/nyks/bridge/withdraw_btc_request_all`,
-      { timeout: 30000 }
-    );
-    const withdrawals = res.data?.withdrawRequest || [];
-
-    let synced = 0;
-    for (const w of withdrawals) {
-      await prisma.btcWithdrawal.upsert({
-        where: { withdrawIdentifier: w.withdrawIdentifier },
-        update: { isConfirmed: w.isConfirmed },
-        create: {
-          withdrawIdentifier: w.withdrawIdentifier,
-          withdrawAddress: w.withdrawAddress,
-          withdrawReserveId: w.withdrawReserveId || '0',
-          withdrawAmount: BigInt(w.withdrawAmount || '0'),
-          twilightAddress: w.twilightAddress,
-          isConfirmed: w.isConfirmed,
-          blockHeight: parseInt(w.CreationTwilightBlockHeight || '0'),
-        },
-      });
-      synced++;
-    }
-    logger.info({ count: synced }, 'Withdrawals synced from LCD');
-  } catch (error) {
-    logger.error({ error }, 'Failed to sync withdrawals from LCD');
-  }
-}
-
 // Start server
 async function main() {
   // Test database connection
@@ -152,10 +164,6 @@ async function main() {
     logger.error({ error }, 'Failed to connect to database');
     process.exit(1);
   }
-
-  // Sync withdrawals from LCD on startup and every 20 minutes
-  syncWithdrawals();
-  setInterval(syncWithdrawals, 20 * 60 * 1000);
 
   server.listen(config.port, config.host, () => {
     logger.info(

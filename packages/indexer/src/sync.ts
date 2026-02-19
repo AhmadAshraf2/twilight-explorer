@@ -4,7 +4,6 @@ import {
   decodeMessage,
   serializeDecodedData,
   MESSAGE_TYPES,
-  decodeZkosTransactionFromApi,
 } from './decoders/index.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
@@ -70,6 +69,25 @@ async function processBlock(height: number): Promise<void> {
   try {
     // Fetch block header first
     const blockInfo = await lcdClient.getBlockByHeight(height);
+
+    // Linkage validation: verify this block's last_block_id matches the previous block's hash
+    if (height > 1) {
+      const expectedPrevHash = blockInfo.block.header.last_block_id?.hash;
+      if (expectedPrevHash) {
+        const prevBlock = await prisma.block.findUnique({
+          where: { height: height - 1 },
+          select: { hash: true },
+        });
+        if (prevBlock && prevBlock.hash !== expectedPrevHash) {
+          logger.error(
+            { height, expectedPrevHash, actualPrevHash: prevBlock.hash },
+            'Block linkage mismatch — possible reorg. Halting indexer.'
+          );
+          stopRequested = true;
+          return;
+        }
+      }
+    }
 
     // Fetch transactions using the events query (returns proper tx_responses with txhash)
     let txResponses: any[] = [];
@@ -359,8 +377,20 @@ async function processCustomMessages(
         });
       }
 
-      // Withdrawals are now synced from LCD endpoint every 20 minutes (see API server)
       if (msgType === MESSAGE_TYPES.WITHDRAW_BTC_REQUEST) {
+        await db.btcWithdrawal.upsert({
+          where: { withdrawIdentifier: parseInt(data.withdrawIdentifier as string) },
+          update: { isConfirmed: (data.isConfirmed as boolean) ?? false },
+          create: {
+            withdrawIdentifier: parseInt(data.withdrawIdentifier as string),
+            withdrawAddress: data.withdrawAddress as string,
+            withdrawReserveId: (data.withdrawReserveId as string) || '0',
+            withdrawAmount: BigInt((data.withdrawAmount as string) || '0'),
+            twilightAddress: data.twilightAddress as string,
+            isConfirmed: (data.isConfirmed as boolean) ?? false,
+            blockHeight,
+          },
+        });
         indexerEvents.emit('withdrawal:new', data);
       }
 
@@ -503,28 +533,22 @@ async function processCustomMessages(
 
       // zkOS Module
       if (msgType === MESSAGE_TYPES.TRANSFER_TX) {
-        // Decode the zkOS transaction using external API
-        const decodedZkos = await decodeZkosTransactionFromApi(data.txByteCode as string);
-
-        // Determine program type from decoded data
-        // For Script transactions: use summary.program_type (e.g., CreateTraderOrder, SettleTraderOrder)
-        // For Transfer/Message transactions: use tx_type directly
-        const programType = (decodedZkos as any)?.summary?.program_type
-          || (decodedZkos as any)?.tx_type
-          || null;
-
-        await db.zkosTransfer.create({
-          data: {
+        // Store raw data immediately — decode happens async via enrichment worker
+        await db.zkosTransfer.upsert({
+          where: { zkTxId: data.zkTxId as string },
+          update: {},
+          create: {
             txHash: txData.hash,
             blockHeight,
             zkTxId: data.zkTxId as string,
             txByteCode: data.txByteCode as string,
             txFee: BigInt(data.txFee as string),
             zkOracleAddress: data.zkOracleAddress as string,
-            decodedData: decodedZkos as any,
-            inputs: decodedZkos?.inputs as any,
-            outputs: decodedZkos?.outputs as any,
-            programType,
+            decodedData: null,
+            inputs: null,
+            outputs: null,
+            programType: null,
+            decodeStatus: 'pending',
           },
         });
       }
@@ -607,12 +631,24 @@ async function updateAccounts(
 
 let isRunning = false;
 let stopRequested = false;
+let lockAcquired = false;
+
+const ADVISORY_LOCK_ID = 123456789;
 
 export async function startSync(): Promise<void> {
   if (isRunning) {
     logger.warn('Sync already running');
     return;
   }
+
+  // Acquire Postgres advisory lock to prevent concurrent indexers
+  const lockResult = await prisma.$queryRaw<[{ pg_try_advisory_lock: boolean }]>`SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID})`;
+  if (!lockResult[0].pg_try_advisory_lock) {
+    logger.warn('Another indexer instance is already running (advisory lock held). Exiting.');
+    return;
+  }
+  lockAcquired = true;
+  logger.info('Advisory lock acquired — this instance is the active indexer');
 
   isRunning = true;
   stopRequested = false;
@@ -658,13 +694,31 @@ export async function startSync(): Promise<void> {
     }
   } finally {
     isRunning = false;
+    if (lockAcquired) {
+      try {
+        await prisma.$queryRaw`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`;
+        lockAcquired = false;
+        logger.info('Advisory lock released');
+      } catch (err) {
+        logger.warn({ err }, 'Failed to release advisory lock');
+      }
+    }
     logger.info('Block sync stopped');
   }
 }
 
-export function stopSync(): void {
+export async function stopSync(): Promise<void> {
   logger.info('Stop requested');
   stopRequested = true;
+  if (lockAcquired) {
+    try {
+      await prisma.$queryRaw`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`;
+      lockAcquired = false;
+      logger.info('Advisory lock released');
+    } catch (err) {
+      logger.warn({ err }, 'Failed to release advisory lock');
+    }
+  }
 }
 
 export function isSyncRunning(): boolean {

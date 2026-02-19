@@ -306,12 +306,16 @@ model ZkosTransfer {
   inputs                Json?     // Parsed inputs
   outputs               Json?     // Parsed outputs
   programType           String?   // e.g., "CreateTraderOrder", "SettleTraderOrder", null for Transfer
+  decodeStatus          String    @default("pending") // "pending" | "ok" | "failed"
+  decodeAttempts        Int       @default(0)
+  lastDecodeError       String?
   createdAt             DateTime  @default(now())
 
   @@index([blockHeight])
   @@index([zkOracleAddress])
   @@index([programType])
   @@index([txHash])
+  @@index([decodeStatus])
 }
 
 model ZkosMintBurn {

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { startSync, stopSync, getSyncStatus, indexerEvents } from './sync.js';
+import { startEnrichment, stopEnrichment } from './enrichment.js';
 import { lcdClient } from './lcd-client.js';
 import { config } from './config.js';
 import { logger } from './logger.js';
@@ -86,7 +87,8 @@ async function main(): Promise<void> {
   // Handle shutdown gracefully
   process.on('SIGINT', async () => {
     logger.info('Received SIGINT, shutting down...');
-    stopSync();
+    stopEnrichment();
+    await stopSync();
     await prisma.$disconnect();
     if (redis) await redis.quit();
     process.exit(0);
@@ -94,13 +96,19 @@ async function main(): Promise<void> {
 
   process.on('SIGTERM', async () => {
     logger.info('Received SIGTERM, shutting down...');
-    stopSync();
+    stopEnrichment();
+    await stopSync();
     await prisma.$disconnect();
     if (redis) await redis.quit();
     process.exit(0);
   });
 
-  // Start syncing
+  // Start enrichment worker (non-blocking — runs in background)
+  startEnrichment().catch((err) => {
+    logger.error({ err }, 'Enrichment worker fatal error');
+  });
+
+  // Start syncing (blocking — main loop)
   await startSync();
 }
 

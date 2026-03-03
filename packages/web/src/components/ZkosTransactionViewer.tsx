@@ -100,6 +100,12 @@ function formatPrice(value: number | string | any): string {
   return `$${num.toLocaleString()}`;
 }
 
+// Normalize program type names (merge variants into canonical names)
+function normalizeProgramType(type: string): string {
+  if (type === 'SettleTraderOrderNegativeMarginDifference') return 'SettleTraderOrder';
+  return type;
+}
+
 // Known relayer programs - maps hex program to human-readable name
 const RELAYER_PROGRAMS: Record<string, { name: string; index: number; description: string }> = {
   '060a0402000000060a0e0401000000060a0402000000060a0e1013': {
@@ -204,7 +210,7 @@ function MemoOrderDetails({ data }: { data: MemoOrderData }) {
       {/* Order Side Badge */}
       {order_side && (
         <div className="flex items-center gap-2">
-          <span className="text-text-secondary text-sm">Side:</span>
+          <span className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Side</span>
           <span
             className={clsx(
               'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold uppercase',
@@ -223,7 +229,7 @@ function MemoOrderDetails({ data }: { data: MemoOrderData }) {
       {/* Position Size */}
       {position_size !== undefined && (
         <div className="flex items-center gap-2">
-          <span className="text-text-secondary text-sm">Position Size:</span>
+          <span className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Position Size</span>
           <span className="text-white font-medium">{formatPositionSize(position_size)}</span>
         </div>
       )}
@@ -231,7 +237,7 @@ function MemoOrderDetails({ data }: { data: MemoOrderData }) {
       {/* Entry Price */}
       {entry_price !== undefined && (
         <div className="flex items-center gap-2">
-          <span className="text-text-secondary text-sm">Entry Price:</span>
+          <span className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Entry Price</span>
           <span className="text-white font-medium">{formatPrice(entry_price)}</span>
         </div>
       )}
@@ -239,7 +245,7 @@ function MemoOrderDetails({ data }: { data: MemoOrderData }) {
       {/* Leverage */}
       {leverage !== undefined && (
         <div className="flex items-center gap-2">
-          <span className="text-text-secondary text-sm">Leverage:</span>
+          <span className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary">Leverage</span>
           {typeof leverage === 'string' && leverage.length > 20 ? (
             <CopyableText
               text={leverage}
@@ -842,11 +848,12 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
           {scriptAddrStr && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Script:</span>
-              <CopyableText
-                text={scriptAddrStr}
-                displayText={scriptAddrStr}
-                className="font-mono text-accent-yellow text-xs break-all"
-              />
+              <Link
+                href={`/scripts/${scriptAddrStr}`}
+                className="font-mono text-accent-yellow text-xs break-all hover:underline"
+              >
+                {scriptAddrStr}
+              </Link>
             </div>
           )}
           {commitment && (
@@ -925,11 +932,12 @@ function ScriptOutputItem({ output, index }: { output: any; index: number }) {
           {scriptAddrStr && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Script:</span>
-              <CopyableText
-                text={scriptAddrStr}
-                displayText={scriptAddrStr}
-                className="font-mono text-accent-yellow text-xs break-all"
-              />
+              <Link
+                href={`/scripts/${scriptAddrStr}`}
+                className="font-mono text-accent-yellow text-xs break-all hover:underline"
+              >
+                {scriptAddrStr}
+              </Link>
             </div>
           )}
           {commitment && (
@@ -1136,11 +1144,12 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
           {scriptAddrStr && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Script:</span>
-              <CopyableText
-                text={scriptAddrStr}
-                displayText={scriptAddrStr}
-                className="font-mono text-accent-yellow text-xs break-all"
-              />
+              <Link
+                href={`/scripts/${scriptAddrStr}`}
+                className="font-mono text-accent-yellow text-xs break-all hover:underline"
+              >
+                {scriptAddrStr}
+              </Link>
             </div>
           )}
           {commitment && (
@@ -1327,11 +1336,12 @@ function ScriptInputItem({ input, index }: { input: any; index: number }) {
           {scriptAddrStr && (
             <div className="flex items-start gap-2">
               <span className="text-text-secondary min-w-[100px]">Script:</span>
-              <CopyableText
-                text={scriptAddrStr}
-                displayText={scriptAddrStr}
-                className="font-mono text-accent-yellow text-xs break-all"
-              />
+              <Link
+                href={`/scripts/${scriptAddrStr}`}
+                className="font-mono text-accent-yellow text-xs break-all hover:underline"
+              >
+                {scriptAddrStr}
+              </Link>
             </div>
           )}
           {commitment && (
@@ -1700,7 +1710,7 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
   const matchedProgram = matchRelayerProgram(script, summary);
 
   // Get program type from summary or matched program
-  const programType = safeString(summary?.program_type) || matchedProgram?.name;
+  const programType = normalizeProgramType(safeString(summary?.program_type) || matchedProgram?.name || '');
 
   // Determine the type config for styling based on program type
   const getProgramTypeConfig = (type: string) => {
@@ -1733,16 +1743,16 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
     <div className="space-y-4">
       {/* Program Type Banner */}
       {programType && programConfig && (
-        <div className={clsx('rounded-lg p-4 border', programConfig.bgColor, programConfig.borderColor)}>
+        <div className={clsx('rounded-[10.5px] p-4 border', programConfig.bgColor, programConfig.borderColor)}>
           <div className="flex items-center gap-3">
-            <div className={clsx('p-2 rounded-lg', programConfig.bgColor)}>
+            <div className={clsx('p-2 rounded-[7px] border border-card-border/30', programConfig.bgColor)}>
               <ProgramIcon className={clsx('w-5 h-5', programConfig.color)} />
             </div>
             <div>
               <div className={clsx('font-semibold', programConfig.color)}>
                 {programType}
               </div>
-              <div className="text-text-secondary text-sm">
+              <div className="text-[12.3px] leading-[18px] text-text-secondary">
                 {programConfig.desc}
               </div>
             </div>
@@ -2404,7 +2414,7 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
 
   // Get program/order type from summary
   const orderType = safeString(summary?.order_type);
-  const programType = safeString(summary?.program_type);
+  const programType = normalizeProgramType(safeString(summary?.program_type));
   const displayType = orderType || programType;
 
   // Determine the type config for styling
@@ -2432,16 +2442,16 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
     <div className="space-y-4">
       {/* Program/Order Type Banner */}
       {displayType && typeConfig && (
-        <div className={clsx('rounded-lg p-4 border', typeConfig.bgColor, typeConfig.borderColor)}>
+        <div className={clsx('rounded-[10.5px] p-4 border shadow-card', typeConfig.bgColor, typeConfig.borderColor)}>
           <div className="flex items-center gap-3">
-            <div className={clsx('p-2 rounded-lg', typeConfig.bgColor)}>
+            <div className={clsx('p-2 rounded-[7px] border border-card-border/30', typeConfig.bgColor)}>
               <TypeIcon className={clsx('w-5 h-5', typeConfig.color)} />
             </div>
             <div>
               <div className={clsx('font-semibold', typeConfig.color)}>
                 {displayType}
               </div>
-              <div className="text-text-secondary text-sm">
+              <div className="text-[12.3px] leading-[18px] text-text-secondary">
                 zkOS Transfer Transaction
               </div>
             </div>
@@ -2679,16 +2689,16 @@ function MessageViewer({ tx, summary }: { tx: any; summary?: any }) {
     <div className="space-y-4">
       {/* Burn Summary Banner */}
       {isBurn && amount && (
-        <div className="bg-accent-orange/10 rounded-lg p-4 border border-accent-orange/30">
+        <div className="bg-accent-orange/10 rounded-[10.5px] p-4 border border-accent-orange/30 shadow-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-accent-orange/20">
+            <div className="p-2 rounded-[7px] bg-accent-orange/20 border border-card-border/30">
               <Flame className="w-6 h-6 text-accent-orange" />
             </div>
             <div>
               <div className="text-accent-orange font-semibold text-lg">
                 {amount.toLocaleString()} sats burned
               </div>
-              <div className="text-text-secondary text-sm">
+              <div className="text-[12.3px] leading-[18px] text-text-secondary">
                 Burn transaction - removing coins from circulation
               </div>
             </div>
@@ -2899,13 +2909,13 @@ function OrderSummary({ summary }: { summary: ZkosSummary }) {
   const Icon = config.icon;
   const orderSize = summary.outputs?.[0]?.order_size;
   const orderType = safeString(summary.order_type);
-  const programType = safeString(summary.program_type);
+  const programType = normalizeProgramType(safeString(summary.program_type));
   const programOpcodes = summary.program_opcodes || [];
 
   return (
-    <div className={clsx('rounded-lg p-4 mb-4 border border-border/50', config.bgColor)}>
+    <div className={clsx('rounded-[10.5px] p-4 mb-4 border border-card-border/60 shadow-card', config.bgColor)}>
       <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-background-primary/50">
+        <div className="p-2 rounded-[7px] bg-background-primary/30 border border-card-border/30">
           <Icon className={clsx('w-5 h-5', config.color)} />
         </div>
         <div className="flex-1 min-w-0">
@@ -2922,7 +2932,7 @@ function OrderSummary({ summary }: { summary: ZkosSummary }) {
             </span>
           </div>
           {summary.order_operation_description && (
-            <p className="text-text-secondary text-sm mb-2">
+            <p className="text-[12.3px] leading-[18px] text-text-secondary mb-2">
               {safeString(summary.order_operation_description)}
             </p>
           )}
@@ -2951,7 +2961,7 @@ function OrderSummary({ summary }: { summary: ZkosSummary }) {
                 <span>Program Opcodes ({programOpcodes.length})</span>
               </button>
               {showOpcodes && (
-                <div className="mt-2 bg-background-primary/30 rounded-lg p-3 border border-border/30">
+                <div className="mt-2 bg-background-primary/30 rounded-[10.5px] p-3 border border-card-border/30">
                   <div className="flex flex-wrap gap-1.5">
                     {programOpcodes.map((opcode: string, idx: number) => (
                       <OpcodeItem key={idx} opcode={opcode} />

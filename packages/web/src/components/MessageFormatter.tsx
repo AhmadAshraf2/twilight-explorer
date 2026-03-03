@@ -204,7 +204,9 @@ function DataRow({
 }) {
   return (
     <div className={clsx('flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 py-2 border-b border-border/50 last:border-0', className)}>
-      <span className="text-text-secondary text-sm min-w-[140px] shrink-0">{label}</span>
+      <span className="text-[10.5px] leading-[14px] uppercase tracking-wider text-text-secondary min-w-[160px] shrink-0 pt-0.5">
+        {label}
+      </span>
       <span className="text-white break-all">{children}</span>
     </div>
   );
@@ -740,7 +742,7 @@ const messageConfigs: Record<string, MessageConfig> = {
 // Default formatter for unknown message types
 function DefaultMessageFormatter({ data }: { data: any }) {
   return (
-    <pre className="text-sm text-text-secondary overflow-x-auto bg-background-secondary p-3 rounded">
+    <pre className="text-[12.3px] leading-[18px] text-text-secondary overflow-x-auto bg-background-primary/30 border border-card-border/30 p-3 rounded-[7px]">
       {JSON.stringify(data, null, 2)}
     </pre>
   );
@@ -755,16 +757,18 @@ export function MessageFormatter({ message }: { message: any }) {
   const title = config?.title || message.typeName || message.type.split('.').pop()?.replace('Msg', '') || 'Unknown';
 
   return (
-    <div className="bg-background-tertiary rounded-lg border border-border overflow-hidden">
+    <div className="bg-background-tertiary/40 rounded-[10.5px] border border-card-border overflow-hidden shadow-card">
       {/* Header */}
-      <div className={clsx('flex items-center gap-3 p-4 border-b border-border', bgColor)}>
-        <div className={clsx('p-2 rounded-lg bg-background-primary/50')}>
+      <div className={clsx('flex items-center gap-3 p-4 border-b border-card-border/60', bgColor)}>
+        <div className={clsx('p-2 rounded-[7px] bg-background-primary/30 border border-card-border/30')}>
           <Icon className={clsx('w-5 h-5', iconColor)} />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-white">{title}</h3>
+          <h3 className="font-medium text-white text-[14px] leading-[20px]">{title}</h3>
           {message.module && (
-            <span className="text-xs text-text-muted uppercase">{message.module} module</span>
+            <span className="text-[10.5px] leading-[14px] text-text-muted uppercase tracking-wider">
+              {message.module} module
+            </span>
           )}
         </div>
       </div>

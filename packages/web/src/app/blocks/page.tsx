@@ -21,72 +21,128 @@ export default function BlocksPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-primary/20 rounded-lg">
+        <div className="p-2 bg-primary/20 rounded-[7px] border border-card-border/50">
           <Blocks className="w-6 h-6 text-primary-light" />
         </div>
-        <h1 className="text-2xl font-bold text-white">Blocks</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Blocks</h1>
+          <p className="text-text-secondary text-sm">Browse recent blocks on the Twilight network</p>
+        </div>
       </div>
 
-      {isLoading ? (
-        <LoadingTable rows={10} />
-      ) : (
-        <>
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Height</th>
-                  <th>Hash</th>
-                  <th>Transactions</th>
-                  <th>Gas Used</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data?.data.map((block) => (
-                  <tr key={block.height}>
-                    <td>
-                      <Link
-                        href={`/blocks/${block.height}`}
-                        className="text-primary-light hover:text-primary font-medium"
-                      >
-                        #{block.height.toLocaleString()}
-                      </Link>
-                    </td>
-                    <td>
-                      <span className="font-mono text-text-secondary text-sm">
-                        {block.hash.substring(0, 16)}...
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-info">{block.txCount}</span>
-                    </td>
-                    <td className="text-text-secondary">
-                      {parseInt(block.gasUsed).toLocaleString()}
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1 text-text-secondary text-sm">
-                        <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(block.timestamp), {
-                          addSuffix: true,
-                        })}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="card">
+        <div className="flex items-start justify-between flex-wrap gap-4 mb-4">
+          <div>
+            <h2 className="text-white font-medium text-[15.8px] leading-[24px]">All Blocks</h2>
+            <p className="text-text-secondary text-sm">
+              {isLoading
+                ? 'Loading…'
+                : data
+                  ? `Showing ${data.data.length} of ${data.pagination.total.toLocaleString()}`
+                  : '—'}
+            </p>
           </div>
+        </div>
 
-          {data && data.pagination.totalPages > 1 && (
+        {isLoading ? (
+          <LoadingTable rows={10} />
+        ) : data?.data?.length ? (
+          <>
+            {/* Mobile: card layout */}
+            <div className="md:hidden space-y-3">
+              {data.data.map((block) => (
+                <Link
+                  key={block.height}
+                  href={`/blocks/${block.height}`}
+                  className="block p-4 rounded-[10.5px] border border-card-border bg-black/30 hover:bg-background-tertiary/30 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-white">#{block.height.toLocaleString()}</span>
+                    <span className="badge badge-info">{block.txCount} txns</span>
+                  </div>
+                  <div className="mt-2 space-y-1 text-sm text-text-secondary">
+                    <div className="font-mono truncate">{block.hash.substring(0, 16)}...</div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span>{parseInt(block.gasUsed).toLocaleString()} gas</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden md:block table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Height</th>
+                    <th>Proposer</th>
+                    <th>Hash</th>
+                    <th>Txs</th>
+                    <th>Gas Used</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.data.map((block) => (
+                    <tr key={block.height}>
+                      <td>
+                        <Link href={`/blocks/${block.height}`} className="font-medium">
+                          #{block.height.toLocaleString()}
+                        </Link>
+                      </td>
+                      <td>
+                        {block.proposerOperator ? (
+                          <Link
+                            href={`/validators/${block.proposerOperator}`}
+                            className="text-primary-light hover:text-primary text-sm"
+                          >
+                            {block.proposerMoniker || 'Unknown'}
+                          </Link>
+                        ) : (
+                          <span className="text-text-muted text-sm">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="font-mono text-text-secondary text-sm">
+                          {block.hash.substring(0, 16)}...
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge badge-info">{block.txCount}</span>
+                      </td>
+                      <td className="text-text-secondary">
+                        {parseInt(block.gasUsed).toLocaleString()}
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1 text-text-secondary text-sm">
+                          <Clock className="w-3 h-3" />
+                          {formatDistanceToNow(new Date(block.timestamp), { addSuffix: true })}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="text-center text-text-secondary py-10">No blocks found</div>
+        )}
+
+        {data && data.pagination.totalPages > 1 && (
+          <div className="mt-4">
             <Pagination
               currentPage={page}
               totalPages={data.pagination.totalPages}
               onPageChange={setPage}
             />
-          )}
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

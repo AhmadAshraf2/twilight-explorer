@@ -36,11 +36,11 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
   }
 
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex flex-wrap items-center justify-center gap-2">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="p-2 rounded-lg bg-background-tertiary text-text-secondary hover:text-white hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+        className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-lg bg-background-tertiary text-text-secondary hover:text-white hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -51,7 +51,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           onClick={() => typeof page === 'number' && onPageChange(page)}
           disabled={page === '...'}
           className={clsx(
-            'px-3 py-1 rounded-lg text-sm font-medium',
+            'min-w-[44px] min-h-[44px] flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium',
             page === currentPage
               ? 'bg-primary text-white'
               : page === '...'
@@ -66,7 +66,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="p-2 rounded-lg bg-background-tertiary text-text-secondary hover:text-white hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+        className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-lg bg-background-tertiary text-text-secondary hover:text-white hover:bg-background-secondary disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <ChevronRight className="w-4 h-4" />
       </button>

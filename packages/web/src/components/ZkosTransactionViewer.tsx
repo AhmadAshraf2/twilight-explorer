@@ -100,6 +100,12 @@ function formatPrice(value: number | string | any): string {
   return `$${num.toLocaleString()}`;
 }
 
+// Normalize program type names (merge variants into canonical names)
+function normalizeProgramType(type: string): string {
+  if (type === 'SettleTraderOrderNegativeMarginDifference') return 'SettleTraderOrder';
+  return type;
+}
+
 // Known relayer programs - maps hex program to human-readable name
 const RELAYER_PROGRAMS: Record<string, { name: string; index: number; description: string }> = {
   '060a0402000000060a0e0401000000060a0402000000060a0e1013': {
@@ -1704,7 +1710,7 @@ function ScriptViewer({ tx, summary }: { tx: any; summary?: ZkosSummary }) {
   const matchedProgram = matchRelayerProgram(script, summary);
 
   // Get program type from summary or matched program
-  const programType = safeString(summary?.program_type) || matchedProgram?.name;
+  const programType = normalizeProgramType(safeString(summary?.program_type) || matchedProgram?.name || '');
 
   // Determine the type config for styling based on program type
   const getProgramTypeConfig = (type: string) => {
@@ -2408,7 +2414,7 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
 
   // Get program/order type from summary
   const orderType = safeString(summary?.order_type);
-  const programType = safeString(summary?.program_type);
+  const programType = normalizeProgramType(safeString(summary?.program_type));
   const displayType = orderType || programType;
 
   // Determine the type config for styling
@@ -2903,7 +2909,7 @@ function OrderSummary({ summary }: { summary: ZkosSummary }) {
   const Icon = config.icon;
   const orderSize = summary.outputs?.[0]?.order_size;
   const orderType = safeString(summary.order_type);
-  const programType = safeString(summary.program_type);
+  const programType = normalizeProgramType(safeString(summary.program_type));
   const programOpcodes = summary.program_opcodes || [];
 
   return (

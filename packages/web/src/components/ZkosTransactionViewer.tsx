@@ -2236,7 +2236,7 @@ function SummaryDetailsSection({ summary, scriptData }: { summary: any; scriptDa
           <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md font-semibold text-sm bg-primary/20 text-primary-light">
             <Code className="w-4 h-4" />
-            {value}
+            {normalizeProgramType(value)}
           </div>
         </div>
       );

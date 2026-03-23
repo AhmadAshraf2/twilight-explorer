@@ -2236,7 +2236,7 @@ function SummaryDetailsSection({ summary, scriptData }: { summary: any; scriptDa
         : value;
       return (
         <div key={key} className="bg-background-tertiary/50 rounded-lg p-3 border border-border/30">
-          <div className="text-text-muted text-xs uppercase mb-1">{label}</div>
+          <div className="text-text-muted text-xs uppercase mb-1">Liquidate/Settle Price</div>
           <div className="text-accent-yellow font-bold text-xl">${displayValue}</div>
         </div>
       );

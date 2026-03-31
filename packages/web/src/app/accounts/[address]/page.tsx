@@ -66,6 +66,8 @@ export default function AccountDetailPage() {
     queryKey: ['account', address],
     queryFn: () => getAccount(address),
     enabled: !!address,
+    retry: false,
+    refetchInterval: false,
   });
 
   const { data: txData } = useQuery({

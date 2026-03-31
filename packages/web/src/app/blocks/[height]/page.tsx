@@ -26,6 +26,8 @@ export default function BlockDetailPage() {
     queryKey: ['block', height],
     queryFn: () => getBlock(height),
     enabled: !isNaN(height),
+    retry: false,
+    refetchInterval: false,
   });
 
   if (isLoading) return <Loading />;

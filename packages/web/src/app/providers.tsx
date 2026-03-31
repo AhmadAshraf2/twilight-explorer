@@ -11,6 +11,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 10 * 1000, // 10 seconds
             refetchInterval: 10 * 1000, // Refetch every 10 seconds
+            retry: 1, // Only retry once instead of 3 times
+            refetchIntervalInBackground: false,
           },
         },
       })

@@ -69,6 +69,7 @@ export default function FragmentDetailPage() {
     queryKey: ['fragment', id],
     queryFn: () => getFragment(id),
     enabled: !!id,
+    retry: false,
     staleTime: 600_000, // 10 minutes
     refetchInterval: false,
   });

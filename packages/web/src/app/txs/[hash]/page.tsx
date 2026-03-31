@@ -33,6 +33,8 @@ export default function TransactionDetailPage() {
     queryKey: ['transaction', hash],
     queryFn: () => getTransaction(hash),
     enabled: !!hash,
+    retry: false,
+    refetchInterval: false,
   });
 
   if (isLoading) return <Loading />;

@@ -57,6 +57,8 @@ export default function WithdrawalDetailPage() {
     queryKey: ['withdrawal', id],
     queryFn: () => getWithdrawal(id),
     enabled: !!id,
+    retry: false,
+    refetchInterval: false,
   });
 
   if (isLoading) return <Loading />;

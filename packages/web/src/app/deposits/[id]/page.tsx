@@ -55,6 +55,8 @@ export default function DepositDetailPage() {
     queryKey: ['deposit', id],
     queryFn: () => getDeposit(id),
     enabled: !!id,
+    retry: false,
+    refetchInterval: false,
   });
 
   if (isLoading) return <Loading />;

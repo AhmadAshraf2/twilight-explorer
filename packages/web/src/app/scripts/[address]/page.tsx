@@ -21,6 +21,8 @@ export default function ScriptPage() {
     queryKey: ['script-transactions', scriptAddress, page, limit],
     queryFn: () => getTransactionsByScript(scriptAddress, page, limit),
     enabled: !!scriptAddress,
+    retry: false,
+    refetchInterval: false,
   });
 
   return (

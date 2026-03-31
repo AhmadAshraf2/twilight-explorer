@@ -87,6 +87,7 @@ export default function ValidatorDetailPage() {
     queryKey: ['validator', address],
     queryFn: () => getValidator(address),
     enabled: !!address,
+    retry: false,
     staleTime: 600_000, // 10 minutes
     refetchInterval: false,
   });

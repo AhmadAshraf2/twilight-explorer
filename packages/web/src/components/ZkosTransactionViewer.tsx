@@ -22,6 +22,7 @@ import {
   ClipboardList,
   Flame,
   Key,
+  Shuffle,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -508,6 +509,17 @@ interface CoinOutput {
   out_type: string;
 }
 
+// Mirrors the zkos-rust ShuffleTxProof struct
+// (transaction/src/proof.rs: input_dash_accounts, input/output shuffle_proof + statement, updated_delta_dlog)
+interface ShuffleTxProof {
+  input_dash_accounts?: any[];
+  input_shuffle_proof?: any;
+  input_shuffle_statement?: any;
+  updated_delta_dlog?: any;
+  output_shuffle_proof?: any;
+  output_shuffle_statement?: any;
+}
+
 interface TransferTransaction {
   TransactionTransfer: {
     fee: number;
@@ -517,7 +529,8 @@ interface TransferTransaction {
     output_count: number;
     inputs: CoinInput[];
     outputs: CoinOutput[];
-    proof: any;
+    proof: any; // always DarkTxProof
+    shuffle_proof?: ShuffleTxProof | null; // present iff Quis Quis
     witness: any[];
     witness_count?: number;
   };
@@ -2040,6 +2053,65 @@ function ProofDleqSection({ title, data }: { title: string; data: any }) {
   );
 }
 
+// Shuffle proof display component (Quis Quis transfers)
+function ShuffleProofSection({ proof }: { proof: ShuffleTxProof }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
+      >
+        {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        <Shuffle className="w-4 h-4" />
+        Shuffle Proof (ShuffleTxProof)
+      </button>
+      {open && (
+        <div className="mt-2 bg-background-secondary rounded-lg p-3 border border-border/50 space-y-4">
+          {proof.input_dash_accounts && proof.input_dash_accounts.length > 0 && (
+            <ProofAccountsSection title="Input Dash Accounts" accounts={proof.input_dash_accounts} />
+          )}
+
+          {proof.updated_delta_dlog && (
+            <ProofDleqSection title="Updated Delta DLog" data={proof.updated_delta_dlog} />
+          )}
+
+          {proof.input_shuffle_statement && (
+            <ProofDleqSection title="Input Shuffle Statement" data={proof.input_shuffle_statement} />
+          )}
+
+          {proof.output_shuffle_statement && (
+            <ProofDleqSection title="Output Shuffle Statement" data={proof.output_shuffle_statement} />
+          )}
+
+          {proof.input_shuffle_proof && (
+            <div>
+              <div className="text-xs text-text-muted mb-2 font-medium">Input Shuffle Proof</div>
+              <div className="bg-background-primary/30 rounded p-2 overflow-x-auto">
+                <pre className="text-xs text-text-secondary max-h-64 overflow-y-auto">
+                  {JSON.stringify(proof.input_shuffle_proof, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {proof.output_shuffle_proof && (
+            <div>
+              <div className="text-xs text-text-muted mb-2 font-medium">Output Shuffle Proof</div>
+              <div className="bg-background-primary/30 rounded p-2 overflow-x-auto">
+                <pre className="text-xs text-text-secondary max-h-64 overflow-y-auto">
+                  {JSON.stringify(proof.output_shuffle_proof, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Summary/Order Details section component
 function SummaryDetailsSection({ summary, scriptData }: { summary: any; scriptData?: any }) {
   if (!summary || Object.keys(summary).length === 0) {
@@ -2423,6 +2495,7 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
   const witnessCount = transfer.witness_count || (Array.isArray(witnessData) ? witnessData.length : 0);
   const hasWitness = witnessCount > 0 || (witnessData && Array.isArray(witnessData) && witnessData.length > 0);
   const hasProof = transfer.proof && Object.keys(transfer.proof).length > 0;
+  const isQuisQuis = !!transfer.shuffle_proof;
 
   // Get program/order type from summary
   const orderType = safeString(summary?.order_type);
@@ -2464,7 +2537,7 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
                 {displayType}
               </div>
               <div className="text-[12.3px] leading-[18px] text-text-secondary">
-                zkOS Transfer Transaction
+                {isQuisQuis ? 'zkOS Quis Quis Transfer' : 'zkOS Transfer Transaction'}
               </div>
             </div>
           </div>
@@ -2554,7 +2627,7 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
               <ChevronRight className="w-4 h-4" />
             )}
             <Shield className="w-4 h-4" />
-            Proof Data ({transfer.proof?.delta_dleq ? 'DarkTxProof' : 'ShuffleTxProof'})
+            Proof Data (DarkTxProof)
           </button>
           {showProof && (
             <div className="mt-2 bg-background-secondary rounded-lg p-3 border border-border/50 space-y-4">
@@ -2639,6 +2712,11 @@ function TransferViewer({ tx, summary }: { tx: TransferTransaction; summary?: Zk
             </div>
           )}
         </div>
+      )}
+
+      {/* Shuffle Proof Section — only present on Quis Quis transfers */}
+      {isQuisQuis && transfer.shuffle_proof && (
+        <ShuffleProofSection proof={transfer.shuffle_proof} />
       )}
 
       {/* Raw JSON (collapsible) */}
@@ -3001,9 +3079,19 @@ export function ZkosTransactionViewer({ data }: ZkosTransactionViewerProps) {
 
   const txType = data.data.tx_type;
   const tx = data.data.tx;
+  const isQuisQuisTransfer =
+    txType === 'Transfer' && !!tx?.TransactionTransfer?.shuffle_proof;
 
   // Determine icon and styling based on transaction type
   const getTypeConfig = () => {
+    if (isQuisQuisTransfer) {
+      return {
+        icon: Shuffle,
+        title: 'zkOS Quis Quis Transfer',
+        bgColor: 'bg-accent-blue/10',
+        iconColor: 'text-accent-blue',
+      };
+    }
     switch (txType) {
       case 'Transfer':
         return {
